@@ -16,7 +16,11 @@ if (!SUPABASE_URL || !SUPABASE_SECRET_KEY) {
   );
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
+// ✅ TS now knows these are strings (not undefined)
+const supabaseUrl: string = SUPABASE_URL;
+const supabaseSecretKey: string = SUPABASE_SECRET_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseSecretKey, {
   auth: { persistSession: false },
 });
 
@@ -156,7 +160,7 @@ async function main() {
 
   console.log("ENV CHECK:", {
     SUPABASE_URL,
-    SUPABASE_SECRET_KEY_PREFIX: SUPABASE_SECRET_KEY.slice(0, 12),
+    SUPABASE_SECRET_KEY_PREFIX: supabaseSecretKey.slice(0, 12),
     RESET_DB,
     SEED_SALT,
   });
