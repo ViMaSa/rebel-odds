@@ -101,12 +101,12 @@ function NavBar({ balance, rank }: { balance: number; rank: number }) {
   const links = ["Dashboard", "Portfolio", "Leaderboard", "About", "FAQ"];
 
   const routes: Record<string, string> = {
-  Dashboard:   "/dashboard",
-  Portfolio:   "/portfolio",
-  Leaderboard: "/leaderboard",
-  About:       "/about",
-  FAQ:         "/faq",
-};
+    Dashboard:   "/",
+    Portfolio:   "/portfolio",
+    Leaderboard: "/leaderboard",
+    About:       "/about",
+    FAQ:         "/faq",
+  };
 
   return (
     <nav style={{ background: "#1e1e1e", borderBottom: "4px solid #E31837", position: "sticky", top: 0, zIndex: 50 }}>
@@ -229,9 +229,11 @@ function ContractCard({ contract, onClick }: { contract: Contract; onClick: (c: 
           <span style={{ fontSize: 16 }}>{typeIcon(contract.type)}</span>
           <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: tier.bg, color: "#fff" }}>{tier.label}</span>
         </div>
-        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: days <= 3 ? "#E31837" : "#f0f0f0", color: days <= 3 ? "#fff" : "#666666", whiteSpace: "nowrap" }}>
-          {days}d left
-        </span>
+        {days > 0 && (
+          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: days <= 3 ? "#E31837" : "#f0f0f0", color: days <= 3 ? "#fff" : "#666666", whiteSpace: "nowrap" }}>
+            {days}d left
+          </span>
+        )}
       </div>
 
       <div>
@@ -301,11 +303,12 @@ function Modal({ contract, onClose }: { contract: Contract; onClose: () => void 
             </div>
             <div style={{ position: "relative", marginBottom: 10 }}>
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Token amount..."
-                style={{ width: "100%", border: "1.5px solid #e0e0e0", borderRadius: 12, padding: "12px 48px 12px 16px", fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                style={{ width: "100%", border: "1.5px solid #e0e0e0", borderRadius: 12, padding: "12px 48px 12px 16px", fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "inherit", color: "#222" }}
                 onFocus={(e) => (e.target.style.borderColor = "#E31837")}
                 onBlur={(e) => (e.target.style.borderColor = "#e0e0e0")} />
               <span style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#9FA1A4", fontWeight: 700 }}>RT</span>
             </div>
+            <style>{`.ro-token-input::placeholder { color: #666; }`}</style>
             <div style={{ background: "#f8f8f8", borderRadius: 12, padding: "12px 14px", fontSize: 12, display: "flex", flexDirection: "column", gap: 6 }}>
               {([["Price per share", `${(curPrice * 100).toFixed(1)}%`], ["Est. shares", estShares], ["Fee (0.5%)", `${fee} RT`]] as [string, string][]).map(([k, v]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>
@@ -342,7 +345,6 @@ export default function Dashboard() {
     .sort((a, b) => {
       if (sort === "trending") return (b.yes_pool + b.no_pool) - (a.yes_pool + a.no_pool);
       if (sort === "newest")   return a.id.localeCompare(b.id);
-      if (sort === "ending")   return daysLeft(a.end_date) - daysLeft(b.end_date);
       return 0;
     });
 
@@ -373,23 +375,24 @@ export default function Dashboard() {
       </div>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px" }}>
-        {/* Stats */}
         <style>{`
           .ro-stats-grid { grid-template-columns: repeat(4, 1fr); }
           @media (max-width: 700px) { .ro-stats-grid { grid-template-columns: repeat(2, 1fr); } }
           @media (max-width: 380px) { .ro-stats-grid { grid-template-columns: 1fr; } }
           .ro-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px; }
           .ro-sort-btns { display: flex; gap: 8px; }
-          .ro-search { border: 1.5px solid #ddd; background: #fff; border-radius: 9px; padding: 9px 16px; font-size: 13px; outline: none; width: 240px; box-sizing: border-box; font-family: inherit; }
+          .ro-search { border: 1.5px solid #ddd; background: #fff; border-radius: 9px; padding: 9px 16px; font-size: 13px; outline: none; width: 200px; box-sizing: border-box; font-family: inherit; color: #222; }
+          .ro-search::placeholder { color: #666; }
           .ro-search:focus { border-color: #E31837; }
-          @media (max-width: 560px) {
-            .ro-filters { flex-direction: column; align-items: center; }
+          @media (max-width: 480px) {
+            .ro-filters { flex-direction: column; align-items: stretch; }
             .ro-sort-btns { flex-direction: column; width: 100%; }
             .ro-sort-btns button { width: 100%; text-align: center; }
             .ro-search { width: 100%; text-align: center; }
           }
         `}</style>
 
+        {/* Stats */}
         <div className="ro-stats-grid" style={{ display: "grid", gap: 12, marginTop: -20, marginBottom: 24 }}>
           <StatCard label="Active Markets" value="6" sub="Open for trading" />
           <StatCard label="Your Balance" value="9,250 RT" sub="Available tokens" accent="#2d8a4e" />
@@ -400,8 +403,8 @@ export default function Dashboard() {
         {/* Filters */}
         <div className="ro-filters">
           <div className="ro-sort-btns">
-            {(["trending", "newest", "ending"] as const).map((key) => {
-              const labels: Record<string, string> = { trending: "🔥 Trending", newest: "🆕 Newest", ending: "⏰ Ending Soon" };
+            {(["trending", "newest"] as const).map((key) => {
+              const labels: Record<string, string> = { trending: "🔥 Trending", newest: "🆕 Newest" };
               return (
                 <button key={key} onClick={() => setSort(key)}
                   style={{ padding: "9px 18px", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .2s", background: sort === key ? "#E31837" : "#fff", color: sort === key ? "#fff" : "#666666", border: `1.5px solid ${sort === key ? "#E31837" : "#ddd"}` }}>
