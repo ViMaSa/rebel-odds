@@ -96,7 +96,7 @@ export default function AboutPage() {
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", padding: "0 20px 64px", textAlign: "center", maxWidth: 860, margin: "0 auto", left: 0, right: 0 }}>
           <div style={{ fontSize: 11, color: "#E31837", textTransform: "uppercase", letterSpacing: 4, fontWeight: 700, marginBottom: 16 }}>Las Vegas, Nevada</div>
           <h1 style={{ color: "#fff", fontSize: "clamp(32px,6vw,58px)", fontWeight: 900, fontFamily: "Georgia,serif", lineHeight: 1.1, margin: "0 0 20px" }}>
-            Built in the City of Second Chances
+            Rebel Odds
           </h1>
           <p style={{ color: "rgba(255,255,255,.75)", fontSize: "clamp(14px,2vw,18px)", lineHeight: 1.7, maxWidth: 640, margin: 0 }}>
             Rebel Odds was born from a simple belief: if students had real skin in the game, they&apos;d take their academic futures more seriously — and so would the people betting on them.
@@ -120,7 +120,7 @@ export default function AboutPage() {
             <StatCard value={39} suffix="%" label="ELA Proficiency" sub="Only 39% of Clark County students are proficient in English Language Arts" accent="#9FA1A4" />
             <StatCard value={479578} label="Students Statewide" sub="CCSD alone serves 63.5% of all Nevada students — the 5th largest district in the US" accent="#2d8a4e" />
             <StatCard value={33} suffix="%" label="Chronic Absenteeism" sub="Nearly 1 in 3 CCSD students miss 10% or more of school days each year" accent="#E31837" />
-            <StatCard value={97} suffix="%" label="CTE Graduation Rate" sub="Career & Technical Education students graduate at dramatically higher rates" accent="#2d8a4e" />
+            
           </div>
         </div>
       </div>
@@ -214,10 +214,10 @@ export default function AboutPage() {
           <div style={{ fontSize: 10, color: "#E31837", textTransform: "uppercase", letterSpacing: 3, fontWeight: 700, marginBottom: 16 }}>How We Got Here</div>
           <h2 style={{ fontSize: "clamp(22px,4vw,32px)", fontWeight: 900, fontFamily: "Georgia,serif", color: "#111", margin: 0 }}>The Rebel Odds Story</h2>
         </div>
-        <TimelineItem year="2022" title="The Idea" body="Four UNLV students, frustrated by Las Vegas's education statistics, ask a simple question: could prediction markets change how students relate to their own academic futures? A napkin sketch becomes a thesis." />
-        <TimelineItem year="2023" title="Research & Validation" body="The team dives into CCSD data. They find staggering gaps: 30% math proficiency, 33% chronic absenteeism, an 18.5% dropout rate. They also discover that CTE students — who have tangible, career-linked goals — graduate at 97.5%. The insight: engagement + stakes = outcomes." />
-        <TimelineItem year="2024" title="Building the MVP" body="Armed with a Supabase backend, a Next.js frontend, and an AMM-based pricing engine, the team builds the first version of Rebel Odds. Mock contracts, paper tokens, real market mechanics. The hackathon clock starts ticking." />
-        <TimelineItem year="2025" title="Launch" body="Rebel Odds goes live as a paper-trading platform. No real money. Real accountability. The first markets open on six students — Top Scholars, Averages, and Underdogs alike. Vegas is watching." last />
+        <TimelineItem year="HOUR 1-3" title="The Idea" body="Four UNLV students, frustrated by Las Vegas's education statistics, ask a simple question: could prediction markets change how students relate to their own academic futures? A napkin sketch becomes a thesis." />
+        <TimelineItem year="HOUR 3-6" title="Research & Validation" body="The team dives into CCSD data. They find staggering gaps: 30% math proficiency, 33% chronic absenteeism, an 18.5% dropout rate. They also discover that CTE students — who have tangible, career-linked goals — graduate at 97.5%. The insight: engagement + stakes = outcomes." />
+        <TimelineItem year="HOUR 6-18" title="Building the MVP" body="Armed with a Supabase backend, a Next.js frontend, and an AMM-based pricing engine, the team builds the first version of Rebel Odds. Mock contracts, paper tokens, real market mechanics. The hackathon clock starts ticking." />
+        <TimelineItem year="HOUR 18-24" title="Launch" body="Rebel Odds goes live as a paper-trading platform. No real money. Real accountability. The first markets open on six students — Top Scholars, Averages, and Underdogs alike. Vegas is watching." last />
       </div>
 
       {/* ── TEAM ── */}
