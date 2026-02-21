@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type PerformanceTier = "top" | "average" | "underdog";
@@ -99,6 +100,14 @@ function NavBar({ balance, rank }: { balance: number; rank: number }) {
   const [open, setOpen] = useState(false);
   const links = ["Dashboard", "Portfolio", "Leaderboard", "About", "FAQ"];
 
+  const routes: Record<string, string> = {
+  Dashboard:   "/dashboard",
+  Portfolio:   "/portfolio",
+  Leaderboard: "/leaderboard",
+  About:       "/about",
+  FAQ:         "/faq",
+};
+
   return (
     <nav style={{ background: "#1e1e1e", borderBottom: "4px solid #E31837", position: "sticky", top: 0, zIndex: 50 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
@@ -114,12 +123,12 @@ function NavBar({ balance, rank }: { balance: number; rank: number }) {
         {/* Desktop links */}
         <div style={{ display: "flex", alignItems: "center", gap: 24 }} className="ro-desktop-nav">
           {links.map((l) => (
-            <button key={l}
-              style={{ color: l === "Dashboard" ? "#E31837" : "#9FA1A4", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, padding: 0 }}
-              onMouseEnter={(e) => { if (l !== "Dashboard") (e.target as HTMLElement).style.color = "#fff"; }}
-              onMouseLeave={(e) => { if (l !== "Dashboard") (e.target as HTMLElement).style.color = "#9FA1A4"; }}>
+            <Link key={l} href={routes[l]}
+              style={{ color: l === "Dashboard" ? "#E31837" : "#9FA1A4", fontSize: 13, fontWeight: 600, textDecoration: "none" }}
+              onMouseEnter={(e) => { if (l !== "Dashboard") (e.currentTarget as HTMLElement).style.color = "#fff"; }}
+              onMouseLeave={(e) => { if (l !== "Dashboard") (e.currentTarget as HTMLElement).style.color = "#9FA1A4"; }}>
               {l}
-            </button>
+            </Link>
           ))}
           <div style={{ height: 32, width: 1, background: "#333" }} />
           <div style={{ textAlign: "right" }}>
@@ -144,10 +153,10 @@ function NavBar({ balance, rank }: { balance: number; rank: number }) {
       {open && (
         <div style={{ background: "#161616", borderTop: "1px solid #222", padding: "12px 20px 16px" }}>
           {links.map((l) => (
-            <button key={l} onClick={() => setOpen(false)}
-              style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 0", color: l === "Dashboard" ? "#E31837" : "#9FA1A4", background: "none", border: "none", borderBottom: "1px solid #1a1a1a", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+            <Link key={l} href={routes[l]} onClick={() => setOpen(false)}
+              style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 0", color: l === "Dashboard" ? "#E31837" : "#9FA1A4", textDecoration: "none", borderBottom: "1px solid #1a1a1a", fontSize: 14, fontWeight: 600 }}>
               {l}
-            </button>
+            </Link>
           ))}
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #333", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
