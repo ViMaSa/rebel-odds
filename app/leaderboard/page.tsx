@@ -21,46 +21,21 @@ interface StudentStreak {
 
 // ── Mock Data ──────────────────────────────────────────────────────────────
 const mockStudents: StudentStreak[] = [
-  {
-    id: "1", name: "Maya Patel", major: "Biology", standing: "Senior", performance_tier: "top",
-    streak: 8, recentResults: [true, true, true, true, true], totalResolved: 12, winRate: 0.92, peakStreak: 8,
-  },
-  {
-    id: "2", name: "Alex Rivera", major: "Computer Science", standing: "Junior", performance_tier: "top",
-    streak: 5, recentResults: [true, true, true, true, true], totalResolved: 9, winRate: 0.78, peakStreak: 6,
-  },
-  {
-    id: "3", name: "Priya Singh", major: "Economics", standing: "Senior", performance_tier: "top",
-    streak: 4, recentResults: [true, true, true, true, false], totalResolved: 11, winRate: 0.82, peakStreak: 5,
-  },
-  {
-    id: "4", name: "Jordan Kim", major: "Software Engineering", standing: "Sophomore", performance_tier: "average",
-    streak: 3, recentResults: [true, true, true, false, false], totalResolved: 8, winRate: 0.63, peakStreak: 3,
-  },
-  {
-    id: "5", name: "Sam Okafor", major: "Business", standing: "Freshman", performance_tier: "underdog",
-    streak: 2, recentResults: [true, true, false, true, false], totalResolved: 6, winRate: 0.50, peakStreak: 2,
-  },
-  {
-    id: "6", name: "Chris Nguyen", major: "Physics", standing: "Junior", performance_tier: "underdog",
-    streak: 0, recentResults: [false, false, true, false, true], totalResolved: 7, winRate: 0.43, peakStreak: 2,
-  },
+  { id:"1", name:"Maya Patel",   major:"Biology",              standing:"Senior",    performance_tier:"top",      streak:8, recentResults:[true,true,true,true,true],   totalResolved:12, winRate:0.92, peakStreak:8 },
+  { id:"2", name:"Alex Rivera",  major:"Computer Science",     standing:"Junior",    performance_tier:"top",      streak:5, recentResults:[true,true,true,true,true],   totalResolved:9,  winRate:0.78, peakStreak:6 },
+  { id:"3", name:"Priya Singh",  major:"Economics",            standing:"Senior",    performance_tier:"top",      streak:4, recentResults:[true,true,true,true,false],  totalResolved:11, winRate:0.82, peakStreak:5 },
+  { id:"4", name:"Jordan Kim",   major:"Software Engineering", standing:"Sophomore", performance_tier:"average",  streak:3, recentResults:[true,true,true,false,false], totalResolved:8,  winRate:0.63, peakStreak:3 },
+  { id:"5", name:"Sam Okafor",   major:"Business",             standing:"Freshman",  performance_tier:"underdog", streak:2, recentResults:[true,true,false,true,false],  totalResolved:6,  winRate:0.50, peakStreak:2 },
+  { id:"6", name:"Chris Nguyen", major:"Physics",              standing:"Junior",    performance_tier:"underdog", streak:0, recentResults:[false,false,true,false,true], totalResolved:7,  winRate:0.43, peakStreak:2 },
 ];
 
 const mockUser = { username: "trader_hawk", balance: 9250, rank: 4 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function tierBadge(tier: PerformanceTier) {
-  if (tier === "top")      return { bg: "#A03123", label: "Top Scholar" };
-  if (tier === "underdog") return { bg: "#6A737B", label: "Underdog" };
-  return                          { bg: "#666666", label: "Average" };
-}
-
-function streakFlame(streak: number) {
-  if (streak >= 7) return "🔥🔥🔥";
-  if (streak >= 4) return "🔥🔥";
-  if (streak >= 1) return "🔥";
-  return "❄️";
+  if (tier === "top")      return { bg: "#A03123" };
+  if (tier === "underdog") return { bg: "#6A737B" };
+  return                          { bg: "#666666" };
 }
 
 function streakColor(streak: number) {
@@ -77,32 +52,23 @@ function streakLabel(streak: number) {
   return "COLD";
 }
 
-// ── NavBar — copied exactly from dashboard.tsx ─────────────────────────────
+// ── NavBar ─────────────────────────────────────────────────────────────────
 function NavBar({ balance, rank }: { balance: number; rank: number }) {
   const [open, setOpen] = useState(false);
   const links = ["Dashboard", "Portfolio", "Leaderboard", "About", "FAQ"];
-
   const routes: Record<string, string> = {
-    Dashboard:   "/",
-    Portfolio:   "/portfolio",
-    Leaderboard: "/leaderboard",
-    About:       "/about",
-    FAQ:         "/faq",
+    Dashboard: "/", Portfolio: "/portfolio", Leaderboard: "/leaderboard", About: "/about", FAQ: "/faq",
   };
-
   return (
     <nav style={{ background: "#1e1e1e", borderBottom: "4px solid #E31837", position: "sticky", top: 0, zIndex: 50 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
-        {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#E31837", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 18, fontFamily: "Georgia,serif", flexShrink: 0 }}>R</div>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#E31837", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 18, fontFamily: "Georgia,serif" }}>R</div>
           <div>
             <div style={{ color: "#E31837", fontWeight: 900, fontSize: 16, fontFamily: "Georgia,serif", letterSpacing: 1, lineHeight: 1 }}>REBEL ODDS</div>
             <div style={{ color: "#9FA1A4", fontSize: 9, letterSpacing: 3, textTransform: "uppercase" }}>Prediction Markets</div>
           </div>
         </div>
-
-        {/* Desktop links */}
         <div style={{ display: "flex", alignItems: "center", gap: 24 }} className="ro-desktop-nav">
           {links.map((l) => (
             <Link key={l} href={routes[l]}
@@ -121,8 +87,6 @@ function NavBar({ balance, rank }: { balance: number; rank: number }) {
             {mockUser.username[0].toUpperCase()}
           </div>
         </div>
-
-        {/* Hamburger */}
         <button onClick={() => setOpen((o) => !o)} className="ro-hamburger"
           style={{ display: "none", background: "none", border: "none", cursor: "pointer", padding: 8, flexDirection: "column", gap: 5 }}>
           <span style={{ display: "block", width: 22, height: 2, background: open ? "#E31837" : "#fff", transition: "all .2s", transform: open ? "rotate(45deg) translate(5px,5px)" : "none" }} />
@@ -130,8 +94,6 @@ function NavBar({ balance, rank }: { balance: number; rank: number }) {
           <span style={{ display: "block", width: 22, height: 2, background: open ? "#E31837" : "#fff", transition: "all .2s", transform: open ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
         </button>
       </div>
-
-      {/* Mobile dropdown */}
       {open && (
         <div style={{ background: "#161616", borderTop: "1px solid #222", padding: "12px 20px 16px" }}>
           {links.map((l) => (
@@ -151,19 +113,15 @@ function NavBar({ balance, rank }: { balance: number; rank: number }) {
           </div>
         </div>
       )}
-
       <style>{`
         @media (max-width: 860px) { .ro-desktop-nav { gap: 14px !important; } }
-        @media (max-width: 720px) {
-          .ro-desktop-nav { display: none !important; }
-          .ro-hamburger   { display: flex !important; }
-        }
+        @media (max-width: 720px) { .ro-desktop-nav { display: none !important; } .ro-hamburger { display: flex !important; } }
       `}</style>
     </nav>
   );
 }
 
-// ── StatCard — identical to dashboard ─────────────────────────────────────
+// ── StatCard ───────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, accent }: { label: string; value: string; sub: string; accent?: string }) {
   return (
     <div style={{ background: "#fff", border: "1px solid #ddd", borderRadius: 12, padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,.06)", minWidth: 0 }}>
@@ -177,13 +135,9 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string;
 // ── Result Dots ────────────────────────────────────────────────────────────
 function ResultDots({ results }: { results: boolean[] }) {
   return (
-    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+    <div style={{ display: "flex", gap: 4 }}>
       {results.map((r, i) => (
-        <div key={i} style={{
-          width: 9, height: 9, borderRadius: "50%",
-          background: r ? "#2d8a4e" : "#E31837",
-          opacity: 0.3 + (i / results.length) * 0.7,
-        }} />
+        <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: r ? "#2d8a4e" : "#E31837", opacity: 0.3 + (i / results.length) * 0.7 }} />
       ))}
     </div>
   );
@@ -194,69 +148,81 @@ function StudentRow({ student, rank }: { student: StudentStreak; rank: number })
   const [hov, setHov] = useState(false);
   const tier = tierBadge(student.performance_tier);
   const color = streakColor(student.streak);
+  const winPct = (student.winRate * 100).toFixed(0) + "%";
+  const winColor = student.winRate >= 0.7 ? "#2d8a4e" : student.winRate >= 0.5 ? "#c85a00" : "#E31837";
 
   return (
-    <div
+    <div className="lb-row"
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "48px 1fr 140px 100px 140px 110px",
-        alignItems: "center",
-        padding: "14px 20px",
-        borderBottom: "1px solid #f0f0f0",
-        background: hov ? "#fafafa" : "#fff",
-        transition: "background .15s",
-        gap: 8,
-      }}
+      style={{ background: hov ? "#fafafa" : "#fff", transition: "background .15s" }}
     >
       {/* Rank */}
-      <div style={{ fontFamily: "Georgia,serif", fontWeight: 900, fontSize: 16, color: rank <= 3 ? "#E31837" : "#9FA1A4", textAlign: "center" }}>
-        {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+      <div style={{ fontFamily: "Georgia,serif", fontWeight: 900, textAlign: "center", color: rank <= 3 ? "#E31837" : "#9FA1A4" }}>
+        {/* Full: medal emoji for top 3 */}
+        <span className="lb-full" style={{ fontSize: 16 }}>
+          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+        </span>
+        {/* Compact: always just the number */}
+        <span className="lb-compact" style={{ fontSize: 13 }}>#{rank}</span>
       </div>
 
-      {/* Student */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-        <div style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0, background: tier.bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 15, fontFamily: "Georgia,serif" }}>
+      {/* Student name + meta */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+        <div style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0, background: tier.bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 14, fontFamily: "Georgia,serif" }}>
           {student.name[0]}
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: hov ? "#B10202" : "#000", transition: "color .2s", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: hov ? "#B10202" : "#000", transition: "color .2s", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {student.name}
           </div>
-          <div style={{ fontSize: 11, color: "#9FA1A4", marginTop: 1 }}>{student.major} · {student.standing}</div>
+          {/* Full: show major + standing */}
+          <div className="lb-full" style={{ fontSize: 11, color: "#9FA1A4" }}>{student.major} · {student.standing}</div>
+          {/* Compact: just standing */}
+          <div className="lb-compact" style={{ fontSize: 10, color: "#9FA1A4" }}>{student.standing}</div>
         </div>
+      </div>
+
+      {/* Win rate */}
+      <div className="lb-col-winrate">
+        <div className="lb-full">
+          <div style={{ fontWeight: 700, fontSize: 13, color: winColor }}>{winPct}</div>
+          <div style={{ height: 4, borderRadius: 99, background: "#f0f0f0", marginTop: 4 }}>
+            <div style={{ height: "100%", width: `${student.winRate * 100}%`, borderRadius: 99, background: winColor }} />
+          </div>
+          <div style={{ fontSize: 9, color: "#9FA1A4", marginTop: 2 }}>{student.totalResolved} resolved</div>
+        </div>
+        <div className="lb-compact" style={{ fontWeight: 700, fontSize: 13, color: winColor }}>{winPct}</div>
       </div>
 
       {/* Streak */}
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontFamily: "Georgia,serif", fontWeight: 900, fontSize: 19, color, lineHeight: 1 }}>
-          {streakFlame(student.streak)} {student.streak}
+        <div className="lb-full">
+          {/* whiteSpace nowrap keeps 🔥🔥🔥 8 on one line */}
+          <div style={{ fontFamily: "Georgia,serif", fontWeight: 900, fontSize: 18, color, lineHeight: 1, whiteSpace: "nowrap" }}>
+            {student.streak >= 7 ? "🔥🔥🔥" : student.streak >= 4 ? "🔥🔥" : student.streak >= 1 ? "🔥" : "❄️"} {student.streak}
+          </div>
+          <div style={{ fontSize: 9, fontWeight: 700, color, letterSpacing: 1, marginTop: 2 }}>{streakLabel(student.streak)}</div>
         </div>
-        <div style={{ fontSize: 9, fontWeight: 700, color, letterSpacing: 1, marginTop: 2 }}>
-          {streakLabel(student.streak)}
-        </div>
+        <div className="lb-compact" style={{ fontFamily: "Georgia,serif", fontWeight: 900, fontSize: 15, color, whiteSpace: "nowrap" }}>{student.streak}</div>
       </div>
 
       {/* Last 5 */}
-      <div>
-        <div style={{ fontSize: 9, color: "#9FA1A4", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Last 5</div>
-        <ResultDots results={student.recentResults} />
-      </div>
-
-      {/* Win rate */}
-      <div>
-        <div style={{ fontWeight: 700, fontSize: 14, color: "#000" }}>{(student.winRate * 100).toFixed(0)}%</div>
-        <div style={{ height: 4, borderRadius: 99, background: "#f0f0f0", marginTop: 4 }}>
-          <div style={{ height: "100%", width: `${student.winRate * 100}%`, borderRadius: 99, background: student.winRate >= 0.7 ? "#2d8a4e" : student.winRate >= 0.5 ? "#c85a00" : "#E31837", transition: "width .5s" }} />
+      <div className="lb-col-last5">
+        <div className="lb-full">
+          <div style={{ fontSize: 9, color: "#9FA1A4", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Last 5</div>
+          <ResultDots results={student.recentResults} />
         </div>
-        <div style={{ fontSize: 9, color: "#9FA1A4", marginTop: 2 }}>{student.totalResolved} resolved</div>
+        <div className="lb-compact"><ResultDots results={student.recentResults} /></div>
       </div>
 
       {/* Peak */}
-      <div style={{ textAlign: "right" }}>
-        <div style={{ fontSize: 10, color: "#9FA1A4" }}>Peak streak</div>
-        <div style={{ fontFamily: "Georgia,serif", fontWeight: 700, fontSize: 15, color: "#000" }}>{student.peakStreak} 🔥</div>
+      <div className="lb-col-peak" style={{ textAlign: "right" }}>
+        <div className="lb-full">
+          <div style={{ fontSize: 10, color: "#9FA1A4" }}>Peak</div>
+          <div style={{ fontFamily: "Georgia,serif", fontWeight: 700, fontSize: 14, color: "#000" }}>{student.peakStreak} 🔥</div>
+        </div>
+        <div className="lb-compact" style={{ fontFamily: "Georgia,serif", fontWeight: 700, fontSize: 13, color: "#000" }}>{student.peakStreak}</div>
       </div>
     </div>
   );
@@ -267,7 +233,6 @@ export default function LeaderboardPage() {
   const ranked = [...mockStudents].sort((a, b) =>
     b.streak !== a.streak ? b.streak - a.streak : b.winRate - a.winRate
   );
-
   const topStreak = ranked[0];
   const onFire = ranked.filter((s) => s.streak >= 1).length;
   const avgWinRate = mockStudents.reduce((s, r) => s + r.winRate, 0) / mockStudents.length;
@@ -300,25 +265,53 @@ export default function LeaderboardPage() {
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px" }}>
         <style>{`
-          .lb-stats { grid-template-columns: repeat(4, 1fr); }
-          @media (max-width: 700px) { .lb-stats { grid-template-columns: repeat(2, 1fr); } }
-          @media (max-width: 380px) { .lb-stats { grid-template-columns: 1fr; } }
-          .lb-thead {
+          /* Stat grid */
+          .lb-stats { grid-template-columns: repeat(4,1fr); }
+          @media (max-width:700px) { .lb-stats { grid-template-columns: repeat(2,1fr); } }
+          @media (max-width:380px) { .lb-stats { grid-template-columns: 1fr; } }
+
+          /* Table — 6 cols */
+          .lb-thead, .lb-row {
             display: grid;
-            grid-template-columns: 48px 1fr 140px 100px 140px 110px;
-            gap: 8px; padding: 10px 20px;
+            grid-template-columns: 48px 1fr 120px 140px 120px 80px;
+            gap: 8px;
+            padding: 12px 20px;
+          }
+          .lb-thead {
             font-size: 10px; font-weight: 700; letter-spacing: 2px;
             text-transform: uppercase; color: #9FA1A4;
             border-bottom: 1px solid #e0e0e0; background: #fafafa;
           }
-          @media (max-width: 700px) { .lb-thead { display: none; } }
+          .lb-row { border-bottom: 1px solid #f0f0f0; align-items: center; }
+          .lb-row:last-child { border-bottom: none; }
+
+          /* Full vs compact content visibility */
+          .lb-full    { display: block; }
+          .lb-compact { display: none;  }
+
+          /* ≤ 700px: switch to compact content — numbers only, no bar, no sub-labels */
+          @media (max-width: 700px) {
+            .lb-thead, .lb-row {
+              grid-template-columns: 36px 1fr 70px 60px 60px 52px;
+              gap: 6px;
+              padding: 10px 12px;
+            }
+            .lb-full    { display: none;  }
+            .lb-compact { display: block; }
+          }
+
+          /* ≤ 480px: drop last5 + peak, keep winrate + streak → 4-col */
+          @media (max-width: 480px) {
+            .lb-thead, .lb-row { grid-template-columns: 32px 1fr 56px 60px; }
+            .lb-col-last5, .lb-col-peak { display: none; }
+          }
         `}</style>
 
         {/* Stat cards */}
         <div className="lb-stats" style={{ display: "grid", gap: 12, marginTop: -20, marginBottom: 24 }}>
-          <StatCard label="Top Streak"    value={`${topStreak?.streak ?? 0} 🔥`}         sub={topStreak?.name ?? "—"}       accent="#E31837" />
-          <StatCard label="On Hot Streak" value={`${onFire}`}                              sub="Currently active"             accent="#c85a00" />
-          <StatCard label="Avg Win Rate"  value={`${(avgWinRate * 100).toFixed(0)}%`}      sub="Across all students" />
+          <StatCard label="Top Streak"     value={`${topStreak?.streak ?? 0} 🔥`}        sub={topStreak?.name ?? "—"}  accent="#E31837" />
+          <StatCard label="On Hot Streak"  value={`${onFire}`}                             sub="Currently active"        accent="#c85a00" />
+          <StatCard label="Avg Win Rate"   value={`${(avgWinRate * 100).toFixed(0)}%`}     sub="Across all students" />
           <StatCard label="Total Students" value={`${mockStudents.length}`}                sub="Tracked this semester" />
         </div>
 
@@ -327,18 +320,16 @@ export default function LeaderboardPage() {
           <div className="lb-thead">
             <span>Rank</span>
             <span>Student</span>
+            <span className="lb-col-winrate">Win Rate</span>
             <span style={{ textAlign: "center" }}>Streak</span>
-            <span>Last 5</span>
-            <span>Win Rate</span>
-            <span style={{ textAlign: "right" }}>Peak</span>
+            <span className="lb-col-last5">Last 5</span>
+            <span className="lb-col-peak" style={{ textAlign: "right" }}>Peak</span>
           </div>
-          {ranked.map((student, i) => (
-            <StudentRow key={student.id} student={student} rank={i + 1} />
-          ))}
+          {ranked.map((s, i) => <StudentRow key={s.id} student={s} rank={i + 1} />)}
         </div>
 
         {/* Legend */}
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 20 }}>
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 20, justifyContent: "center" }}>
           {[
             { color: "#E31837", label: "🔥🔥🔥 Legendary (7+)" },
             { color: "#c85a00", label: "🔥🔥 On Fire (4–6)" },
