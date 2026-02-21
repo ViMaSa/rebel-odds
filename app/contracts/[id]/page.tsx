@@ -1,58 +1,57 @@
-import Link from "next/link";
+// app/contracts/[id]/page.tsx
 import { notFound } from "next/navigation";
 
-import { getContractById } from "@/lib/market";
+export const dynamic = "force-dynamic";
 
-import { TradeForm } from "./trade-form";
+type ContractApiResponse =
+  | { ok: true; data: any }
+  | { ok: false; error: string };
 
-export default async function ContractDetailPage({
+async function getContract(id: string) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  const res = await fetch(`${baseUrl}/api/contracts/${id}`, {
+    cache: "no-store",
+  });
+
+  if (!res.ok) return null;
+
+  const payload = (await res.json()) as ContractApiResponse;
+
+  if (!payload || payload.ok !== true) return null;
+
+  return payload.data;
+}
+
+export default async function ContractPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = await params;
-  const record = getContractById(id);
-  if (!record) {
-    notFound();
-  }
+  const data = await getContract(params.id);
 
-  const { contract, student, recentTrades } = record;
+  if (!data) return notFound();
 
+  // IMPORTANT: keep JSX directly after return (or wrap in parentheses)
   return (
-    <main className="mx-auto max-w-5xl space-y-4 p-6">
-      <Link className="text-sm underline" href="/contracts">
-        Back to contracts
-      </Link>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: 20 }}>
+      <h1 style={{ margin: "0 0 12px", fontSize: 18, fontWeight: 800 }}>
+        Contract Detail
+      </h1>
 
-      <h1 className="text-2xl font-bold">{contract.title}</h1>
-      <p className="text-sm text-zinc-600">{contract.description}</p>
-      <p className="text-sm">
-        p_yes {(contract.pYes * 100).toFixed(2)}% | pools YES {contract.yesPool.toFixed(2)} / NO{" "}
-        {contract.noPool.toFixed(2)} | status {contract.status}
-      </p>
-      {student ? (
-        <p className="text-sm text-zinc-700">
-          Student: {student.name} ({student.major}, {student.standing})
-        </p>
-      ) : null}
-
-      <TradeForm contractId={contract.id} />
-
-      <section className="rounded-lg border border-zinc-200 p-4">
-        <h2 className="font-semibold">Recent Trades</h2>
-        {recentTrades.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-600">No trades yet.</p>
-        ) : (
-          <ul className="mt-2 space-y-2 text-sm">
-            {recentTrades.map((trade) => (
-              <li key={trade.id}>
-                {trade.side.toUpperCase()} {trade.action} {trade.tokensSpent.toFixed(2)} tokens | fee{" "}
-                {trade.fee.toFixed(2)} | {new Date(trade.createdAt).toLocaleTimeString()}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
+      <pre
+        style={{
+          background: "#111",
+          color: "#eee",
+          padding: 16,
+          borderRadius: 12,
+          overflowX: "auto",
+          fontSize: 12,
+          lineHeight: 1.4,
+        }}
+      >
+        {JSON.stringify(data, null, 2)}
+      </pre>
+    </div>
   );
 }

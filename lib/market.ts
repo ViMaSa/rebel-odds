@@ -1,382 +1,169 @@
-import { calculateFee, payoutPerShare, sharesFromSpend, toProbabilityYes } from "@/lib/amm";
-import { logger } from "@/lib/server/logger";
-import {
-  Contract,
-  ContractOutcome,
-  Position,
-  Profile,
-  Student,
-  Wallet,
-} from "@/types/contract";
-import { Trade, TradeInput, TradeResult } from "@/types/trade";
-import { LeaderboardRow, Portfolio } from "@/types/user";
+// lib/market.ts
+import { adminClient } from "@/lib/supabase/admin";
+import { calculateFee } from "@/lib/amm";
+import type { TradeAction, TradeInput, TradeResult, TradeSide } from "@/types/trade";
 
-const STARTING_BALANCE = 10_000;
-
-const state: {
-  profiles: Profile[];
-  wallets: Wallet[];
-  students: Student[];
-  contracts: Contract[];
-  positions: Position[];
-  trades: Trade[];
-  platformRevenueTokens: number;
-} = {
-  profiles: [
-    { id: "admin-1", username: "admin.demo", role: "admin" },
-    { id: "trader-1", username: "victor", role: "trader" },
-    { id: "trader-2", username: "sam", role: "trader" },
-  ],
-  wallets: [
-    { userId: "admin-1", balanceTokens: STARTING_BALANCE },
-    { userId: "trader-1", balanceTokens: STARTING_BALANCE },
-    { userId: "trader-2", balanceTokens: STARTING_BALANCE },
-  ],
-  students: [
-    {
-      id: "student-1",
-      name: "Jordan Lee",
-      major: "Computer Science",
-      standing: "Junior",
-      previousGpa: 3.4,
-      performanceTier: "high",
-    },
-    {
-      id: "student-2",
-      name: "Avery Kim",
-      major: "Biology",
-      standing: "Sophomore",
-      previousGpa: 3.7,
-      performanceTier: "high",
-    },
-  ],
-  contracts: [
-    {
-      id: "contract-1",
-      title: "Jordan Lee GPA >= 3.5 this semester",
-      description: "YES wins if final GPA is at least 3.5.",
-      studentId: "student-1",
-      type: "gpa",
-      threshold: 3.5,
-      yesPool: 5000,
-      noPool: 5000,
-      status: "active",
-      endDate: "2026-05-30T23:59:59.000Z",
-    },
-    {
-      id: "contract-2",
-      title: "Avery Kim credits completed >= 15",
-      description: "YES wins if at least 15 credits are completed.",
-      studentId: "student-2",
-      type: "credits",
-      threshold: 15,
-      yesPool: 5000,
-      noPool: 5000,
-      status: "active",
-      endDate: "2026-05-30T23:59:59.000Z",
-    },
-  ],
-  positions: [],
-  trades: [],
-  platformRevenueTokens: 0,
-};
-
-let queue = Promise.resolve();
-
-async function withAtomic<T>(fn: () => T | Promise<T>): Promise<T> {
-  const run = queue.then(fn);
-  queue = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  return run;
+function assertUuid(id: string, label: string) {
+  const ok = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+  if (!ok) throw new Error(`Invalid UUID for ${label}: ${id}`);
 }
 
-function toPublicContract(contract: Contract) {
-  return {
-    ...contract,
-    pYes: toProbabilityYes(contract),
-  };
+function priceYesFromPools(yesPool: number, noPool: number) {
+  const total = yesPool + noPool;
+  if (total <= 0) return 0.5;
+  return yesPool / total;
 }
 
-function getProfileOrThrow(userId: string) {
-  const profile = state.profiles.find((item) => item.id === userId);
-  if (!profile) {
-    throw new Error("Profile not found.");
+function sharesFromSpend(pSide: number, amountTokens: number) {
+  const safeP = Math.max(pSide, 0.01);
+  return amountTokens / safeP;
+}
+
+export async function executeTrade(
+  userId: string,
+  input: TradeInput,
+): Promise<TradeResult> {
+  assertUuid(userId, "userId");
+  assertUuid(input.contractId, "contractId");
+
+  const side: TradeSide = input.side;
+  const action: TradeAction = input.action;
+  const amountTokensNum = Number(input.amountTokens);
+
+  if (!Number.isFinite(amountTokensNum) || amountTokensNum <= 0) {
+    throw new Error("amountTokens must be a positive number.");
   }
-  return profile;
-}
 
-function getWalletOrThrow(userId: string) {
-  const wallet = state.wallets.find((item) => item.userId === userId);
-  if (!wallet) {
-    throw new Error("Wallet not found.");
-  }
-  return wallet;
-}
+  // IMPORTANT: DB columns for wallet + pools are typically integers.
+  // Keep spend + fee as integers to avoid invalid integer syntax.
+  const amountTokens = Math.floor(amountTokensNum);
+  if (amountTokens <= 0) throw new Error("amountTokens is too small.");
 
-function getContractOrThrow(contractId: string) {
-  const contract = state.contracts.find((item) => item.id === contractId);
-  if (!contract) {
-    throw new Error("Contract not found.");
-  }
-  return contract;
-}
+  const fee = calculateFee(amountTokens); // integer
+  const totalDebit = amountTokens + fee;
 
-function getPosition(userId: string, contractId: string) {
-  return state.positions.find((item) => item.userId === userId && item.contractId === contractId);
-}
+  // Fetch wallet
+  const { data: wallet, error: walletErr } = await adminClient
+    .from("wallets")
+    .select("id,user_id,balance_tokens")
+    .eq("user_id", userId)
+    .maybeSingle();
 
-function getOrCreatePosition(userId: string, contractId: string) {
-  let position = getPosition(userId, contractId);
-  if (!position) {
-    position = { userId, contractId, yesShares: 0, noShares: 0 };
-    state.positions.push(position);
-  }
-  return position;
-}
+  if (walletErr) throw new Error(walletErr.message);
+  if (!wallet) throw new Error("Wallet not found.");
 
-function ensureContractTradable(contract: Contract) {
-  if (contract.status !== "active") {
-    throw new Error("Contract is not active.");
-  }
-  if (new Date(contract.endDate).getTime() <= Date.now()) {
+  // Fetch contract
+  const { data: contract, error: contractErr } = await adminClient
+    .from("contracts")
+    .select("id,seed_tokens,yes_token_pool,no_token_pool,status,end_date")
+    .eq("id", input.contractId)
+    .maybeSingle();
+
+  if (contractErr) throw new Error(contractErr.message);
+  if (!contract) throw new Error("Contract not found.");
+
+  if (contract.status !== "active") throw new Error("Contract is not active.");
+  if (contract.end_date && new Date(contract.end_date).getTime() <= Date.now()) {
     throw new Error("Contract has expired.");
   }
-}
 
-function roundTo6(value: number) {
-  return Number(value.toFixed(6));
-}
+  const seed = Number(contract.seed_tokens ?? 0);
+  const yesPoolLive = Number(contract.yes_token_pool ?? 0) + seed;
+  const noPoolLive = Number(contract.no_token_pool ?? 0) + seed;
 
-export function listContracts() {
-  return state.contracts.map(toPublicContract);
-}
+  const pYes = priceYesFromPools(yesPoolLive, noPoolLive);
+  const pSide = side === "yes" ? pYes : 1 - pYes;
 
-export function getContractById(contractId: string) {
-  const contract = state.contracts.find((item) => item.id === contractId);
-  if (!contract) {
-    return null;
-  }
-  const student = state.students.find((item) => item.id === contract.studentId) || null;
-  const recentTrades = state.trades
-    .filter((item) => item.contractId === contract.id)
-    .slice(-10)
-    .reverse();
-
-  return {
-    contract: toPublicContract(contract),
-    student,
-    recentTrades,
-  };
-}
-
-export function createContract(input: {
-  title: string;
-  description: string;
-  studentId: string;
-  type: Contract["type"];
-  threshold: number;
-  yesPool?: number;
-  noPool?: number;
-  endDate: string;
-}) {
-  if (!input.title.trim()) {
-    throw new Error("title is required.");
-  }
-  if (!input.studentId.trim()) {
-    throw new Error("studentId is required.");
-  }
-  const endDateMs = new Date(input.endDate).getTime();
-  if (!Number.isFinite(endDateMs)) {
-    throw new Error("Invalid endDate.");
-  }
-
-  const newContract: Contract = {
-    id: crypto.randomUUID(),
-    title: input.title.trim(),
-    description: input.description.trim(),
-    studentId: input.studentId,
-    type: input.type,
-    threshold: input.threshold,
-    yesPool: input.yesPool ?? 5000,
-    noPool: input.noPool ?? 5000,
-    status: "active",
-    endDate: new Date(endDateMs).toISOString(),
-  };
-
-  state.contracts.push(newContract);
-  return toPublicContract(newContract);
-}
-
-export async function executeTrade(userId: string, input: TradeInput): Promise<TradeResult> {
-  return withAtomic(async () => {
-    const wallet = getWalletOrThrow(userId);
-    const contract = getContractOrThrow(input.contractId);
-    const position = getOrCreatePosition(userId, input.contractId);
-
-    ensureContractTradable(contract);
-
-    const fee = calculateFee(input.amountTokens);
-    if (input.action === "buy") {
-      const totalDebit = input.amountTokens + fee;
-      if (wallet.balanceTokens < totalDebit) {
-        throw new Error("Insufficient wallet balance for trade and fee.");
-      }
-
-      const sharesDelta = sharesFromSpend(contract, input.side, input.amountTokens);
-      wallet.balanceTokens = roundTo6(wallet.balanceTokens - totalDebit);
-      state.platformRevenueTokens = roundTo6(state.platformRevenueTokens + fee);
-
-      if (input.side === "yes") {
-        contract.yesPool = roundTo6(contract.yesPool + input.amountTokens);
-        position.yesShares = roundTo6(position.yesShares + sharesDelta);
-      } else {
-        contract.noPool = roundTo6(contract.noPool + input.amountTokens);
-        position.noShares = roundTo6(position.noShares + sharesDelta);
-      }
-
-      state.trades.push({
-        id: crypto.randomUUID(),
-        userId,
-        contractId: input.contractId,
-        side: input.side,
-        action: input.action,
-        tokensSpent: input.amountTokens,
-        sharesDelta: roundTo6(sharesDelta),
-        fee: roundTo6(fee),
-        createdAt: new Date().toISOString(),
-      });
-    } else {
-      const pSide = input.side === "yes" ? toProbabilityYes(contract) : 1 - toProbabilityYes(contract);
-      const safeP = Math.max(pSide, 0.01);
-      const sharesRequired = input.amountTokens / safeP;
-
-      if (input.side === "yes" && position.yesShares < sharesRequired) {
-        throw new Error("Not enough YES shares to sell.");
-      }
-      if (input.side === "no" && position.noShares < sharesRequired) {
-        throw new Error("Not enough NO shares to sell.");
-      }
-
-      const credit = input.amountTokens - fee;
-      if (credit <= 0) {
-        throw new Error("Sell amount is too small after fees.");
-      }
-
-      wallet.balanceTokens = roundTo6(wallet.balanceTokens + credit);
-      state.platformRevenueTokens = roundTo6(state.platformRevenueTokens + fee);
-
-      if (input.side === "yes") {
-        contract.yesPool = roundTo6(Math.max(1, contract.yesPool - input.amountTokens));
-        position.yesShares = roundTo6(position.yesShares - sharesRequired);
-      } else {
-        contract.noPool = roundTo6(Math.max(1, contract.noPool - input.amountTokens));
-        position.noShares = roundTo6(position.noShares - sharesRequired);
-      }
-
-      state.trades.push({
-        id: crypto.randomUUID(),
-        userId,
-        contractId: input.contractId,
-        side: input.side,
-        action: input.action,
-        tokensSpent: input.amountTokens,
-        sharesDelta: roundTo6(-sharesRequired),
-        fee: roundTo6(fee),
-        createdAt: new Date().toISOString(),
-      });
+  // BUY
+  if (action === "buy") {
+    if (Number(wallet.balance_tokens ?? 0) < totalDebit) {
+      throw new Error("Insufficient wallet balance for trade and fee.");
     }
 
-    const pYes = toProbabilityYes(contract);
+    const sharesReceived = sharesFromSpend(pSide, amountTokens);
+
+    // Update wallet
+    const newWalletBalance = Number(wallet.balance_tokens) - totalDebit;
+
+    const { error: wUpErr } = await adminClient
+      .from("wallets")
+      .update({ balance_tokens: newWalletBalance })
+      .eq("id", wallet.id);
+
+    if (wUpErr) throw new Error(wUpErr.message);
+
+    // Update pools (store excluding seed; seed is constant)
+    const yesTokenPoolBase = Number(contract.yes_token_pool ?? 0);
+    const noTokenPoolBase = Number(contract.no_token_pool ?? 0);
+
+    const nextYesBase = side === "yes" ? yesTokenPoolBase + amountTokens : yesTokenPoolBase;
+    const nextNoBase = side === "no" ? noTokenPoolBase + amountTokens : noTokenPoolBase;
+
+    const { error: cUpErr } = await adminClient
+      .from("contracts")
+      .update({
+        yes_token_pool: nextYesBase,
+        no_token_pool: nextNoBase,
+      })
+      .eq("id", contract.id);
+
+    if (cUpErr) throw new Error(cUpErr.message);
+
+    // Insert trade (NO `action` column in DB)
+    const { data: insertedTrade, error: tInsErr } = await adminClient
+      .from("trades")
+      .insert({
+        user_id: userId,
+        contract_id: contract.id,
+        side,
+        tokens_spent: amountTokens,          // integer
+        shares_received: sharesReceived,     // can be numeric/float
+        fee,                                 // integer
+        price_yes_at_trade: pYes,
+        price_no_at_trade: 1 - pYes,
+      })
+      .select("id,created_at")
+      .maybeSingle();
+
+    if (tInsErr) throw new Error(tInsErr.message);
+
+    const yesPoolAfter = nextYesBase + seed;
+    const noPoolAfter = nextNoBase + seed;
+    const pYesAfter = priceYesFromPools(yesPoolAfter, noPoolAfter);
+
     return {
       contractId: contract.id,
-      yesPool: contract.yesPool,
-      noPool: contract.noPool,
-      pYes,
-      walletBalance: wallet.balanceTokens,
-      position: {
-        yesShares: position.yesShares,
-        noShares: position.noShares,
-      },
-      feeCharged: roundTo6(fee),
-    };
-  });
+      yesPool: yesPoolAfter,
+      noPool: noPoolAfter,
+      pYes: pYesAfter,
+      walletBalance: newWalletBalance,
+      position: { yesShares: 0, noShares: 0 }, // optional: wire positions table later
+      feeCharged: fee,
+      tradeId: insertedTrade?.id,
+      tradeCreatedAt: insertedTrade?.created_at,
+    } as any;
+  }
+
+  // SELL (if you don’t support sell yet, fail loudly)
+  throw new Error("Sell is not implemented yet (DB positions not wired).");
 }
 
-export function getPortfolio(userId: string): Portfolio {
-  const profile = getProfileOrThrow(userId);
-  const wallet = getWalletOrThrow(userId);
-  const positions = state.positions
-    .filter((item) => item.userId === userId)
-    .map((position) => {
-      const contract = getContractOrThrow(position.contractId);
-      const pYes = toProbabilityYes(contract);
-      const pNo = 1 - pYes;
-      const markToMarketValue = roundTo6(position.yesShares * pYes + position.noShares * pNo);
-      return {
-        contractId: position.contractId,
-        contractTitle: contract.title,
-        status: contract.status,
-        yesShares: position.yesShares,
-        noShares: position.noShares,
-        pYes,
-        markToMarketValue,
-      };
-    });
+// Optional exports used elsewhere (keep minimal so Vercel build stops failing)
+export async function getLeaderboard() {
+  const { data, error } = await adminClient
+    .from("wallets")
+    .select("user_id,balance_tokens")
+    .order("balance_tokens", { ascending: false });
 
-  const netWorth =
-    wallet.balanceTokens + positions.reduce((sum, item) => sum + item.markToMarketValue, 0);
-
-  return {
-    profile,
-    wallet,
-    positions,
-    netWorth: roundTo6(netWorth),
-  };
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
-export function getLeaderboard(): LeaderboardRow[] {
-  return state.profiles
-    .map((profile) => {
-      const portfolio = getPortfolio(profile.id);
-      return {
-        userId: profile.id,
-        username: profile.username,
-        netWorth: portfolio.netWorth,
-        walletBalance: portfolio.wallet.balanceTokens,
-      };
-    })
-    .sort((a, b) => b.netWorth - a.netWorth);
-}
+export async function getPlatformStats() {
+  const { count, error } = await adminClient
+    .from("trades")
+    .select("*", { count: "exact", head: true });
 
-export async function resolveContract(contractId: string, outcome: ContractOutcome) {
-  return withAtomic(async () => {
-    const contract = getContractOrThrow(contractId);
-    if (contract.status === "resolved") {
-      throw new Error("Contract already resolved.");
-    }
-
-    contract.status = "resolved";
-    contract.resolvedOutcome = outcome;
-
-    for (const position of state.positions.filter((item) => item.contractId === contract.id)) {
-      const payout = payoutPerShare(outcome, position.yesShares, position.noShares);
-      if (payout <= 0) {
-        continue;
-      }
-      const wallet = getWalletOrThrow(position.userId);
-      wallet.balanceTokens = roundTo6(wallet.balanceTokens + payout);
-    }
-
-    logger.info({ contractId, outcome }, "Contract resolved");
-    return toPublicContract(contract);
-  });
-}
-
-export function getPlatformStats() {
-  return {
-    platformRevenueTokens: state.platformRevenueTokens,
-    totalTrades: state.trades.length,
-  };
+  if (error) throw new Error(error.message);
+  return { totalTrades: count ?? 0 };
 }

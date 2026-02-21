@@ -1,31 +1,26 @@
-import { Contract, ContractOutcome } from "@/types/contract";
+import { ContractOutcome } from "@/types/contract";
 import { TradeSide } from "@/types/trade";
 
 export const FEE_BPS = 50; // 0.5%
 
-export function toProbabilityYes(contract: Pick<Contract, "yesPool" | "noPool">) {
-  const total = contract.yesPool + contract.noPool;
-  if (total <= 0) {
-    return 0.5;
-  }
-  return contract.yesPool / total;
+export function calculateFee(amountTokens: number): number {
+  // integer fee (0.5%), rounded UP
+  return Math.ceil(amountTokens * (FEE_BPS / 10_000));
 }
 
-export function toProbabilitySide(contract: Pick<Contract, "yesPool" | "noPool">, side: TradeSide) {
-  const pYes = toProbabilityYes(contract);
+export function toProbabilityYes(yesPool: number, noPool: number) {
+  const total = yesPool + noPool;
+  if (total <= 0) return 0.5;
+  return yesPool / total;
+}
+
+export function toProbabilitySide(yesPool: number, noPool: number, side: TradeSide) {
+  const pYes = toProbabilityYes(yesPool, noPool);
   return side === "yes" ? pYes : 1 - pYes;
 }
 
-export function calculateFee(amountTokens: number) {
-  return (amountTokens * FEE_BPS) / 10_000;
-}
-
-export function sharesFromSpend(
-  contract: Pick<Contract, "yesPool" | "noPool">,
-  side: TradeSide,
-  amountTokens: number,
-) {
-  const pSide = Math.max(toProbabilitySide(contract, side), 0.01);
+export function sharesFromSpend(yesPool: number, noPool: number, side: TradeSide, amountTokens: number) {
+  const pSide = Math.max(toProbabilitySide(yesPool, noPool, side), 0.01);
   return amountTokens / pSide;
 }
 

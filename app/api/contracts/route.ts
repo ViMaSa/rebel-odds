@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/lib/auth";
 
 type ContractType = "gpa" | "course";
 
@@ -35,7 +34,6 @@ export async function GET() {
 // POST /api/contracts
 export async function POST(request: Request) {
   try {
-    // await requireAdmin();
 
     const body = await request.json();
 

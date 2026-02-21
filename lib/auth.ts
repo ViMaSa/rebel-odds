@@ -1,29 +1,24 @@
-import { headers } from "next/headers";
+// lib/auth.ts
+import { cookies } from "next/headers";
 
-import { UserRole } from "@/types/contract";
+export type SessionUser = {
+  id: string; // uuid
+  role?: "admin" | "trader";
+  username?: string;
+};
 
-export interface SessionUser {
-  id: string;
-  role: UserRole;
+export async function getSessionUser(): Promise<SessionUser | null> {
+  const cookieStore = await cookies();
+  const id = cookieStore.get("demo_user_id")?.value;
+
+  if (!id) return null;
+
+  return { id, role: "trader", username: "demo_trader" };
 }
 
-/**
- * Demo auth shim for hackathon speed.
- * Replace with Supabase Auth session lookup in production.
- */
-export async function getSessionUser(): Promise<SessionUser> {
-  const headerStore = await headers();
-  const id = headerStore.get("x-user-id") || "trader-1";
-  const roleHeader = headerStore.get("x-user-role");
-  const role: UserRole = roleHeader === "admin" ? "admin" : "trader";
-
-  return { id, role };
-}
-
-export async function requireAdmin() {
+export async function requireAdmin(): Promise<SessionUser> {
   const user = await getSessionUser();
-  if (user.role !== "admin") {
-    throw new Error("Admin role required.");
-  }
+  if (!user) throw new Error("Not authenticated.");
+  if (user.role !== "admin") throw new Error("Admin role required.");
   return user;
 }
