@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rebel Odds (Hackathon MVP)
 
-## Getting Started
+Backend-first paper-trading academic prediction market built in a single Next.js app.
 
-First, run the development server:
+## Important Disclaimer
+
+Rebel Tokens are virtual. This app has no real-money deposits, withdrawals, or cash value.
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Demo Routes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/contracts`
+- `/contracts/[id]`
+- `/portfolio`
+- `/leaderboard`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## API Routes
 
-## Learn More
+- `GET /api/contracts`
+- `GET /api/contracts/:id`
+- `POST /api/contracts` (admin)
+- `POST /api/trade`
+- `GET /api/portfolio`
+- `GET /api/leaderboard`
+- `POST /api/contracts/:id/resolve` (admin)
 
-To learn more about Next.js, take a look at the following resources:
+## Demo Auth Headers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Current auth is a hackathon shim (not Supabase yet). Use headers to emulate users:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Trader: `x-user-id: trader-1`, `x-user-role: trader`
+- Admin: `x-user-id: admin-1`, `x-user-role: admin`
 
-## Deploy on Vercel
+Without headers, requests default to `trader-1`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Trade/resolve behavior is centralized in `lib/market.ts`.
+- Mutations use a process-local atomic queue for MVP consistency.
+- Runtime API routes still use in-memory state; next step is moving `lib/market.ts` to Supabase queries/transactions.
