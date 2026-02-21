@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/lib/auth";
 
 type ContractType = "gpa" | "course";
 
