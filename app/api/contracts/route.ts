@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { adminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
 
 type ContractType = "gpa" | "course";
@@ -11,9 +11,7 @@ function parseContractType(value: string): ContractType | null {
 
 // GET /api/contracts
 export async function GET() {
-  const supabase = await createClient();  // await here
-
-  const { data: contracts, error } = await supabase
+  const { data: contracts, error } = await adminClient
     .from("contracts")
     .select(`
       *,
@@ -39,7 +37,6 @@ export async function POST(request: Request) {
   try {
     // await requireAdmin();
 
-    const supabase = await createClient();  // await here
     const body = await request.json();
 
     const type = parseContractType(String(body.type ?? ""));
@@ -56,7 +53,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "title and studentId are required." }, { status: 400 });
     }
 
-    const { data: student, error: studentError } = await supabase
+    // fetch student
+    const { data: student, error: studentError } = await adminClient
       .from("students")
       .select("*")
       .eq("id", body.studentId)
@@ -66,9 +64,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Student not found." }, { status: 404 });
     }
 
+    // fetch professor if provided
     let professor = null;
     if (body.professorId) {
-      const { data: prof } = await supabase
+      const { data: prof } = await adminClient
         .from("professors")
         .select("*")
         .eq("id", body.professorId)
@@ -96,7 +95,8 @@ export async function POST(request: Request) {
     yesOdds = Math.min(0.90, Math.max(0.10, yesOdds));
     const noOdds = parseFloat((1 - yesOdds).toFixed(4));
 
-    const { data: created, error: insertError } = await supabase
+    // insert contract
+    const { data: created, error: insertError } = await adminClient
       .from("contracts")
       .insert({
         title:             String(body.title),
