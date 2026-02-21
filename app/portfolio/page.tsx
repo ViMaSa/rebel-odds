@@ -99,9 +99,9 @@ function calcPosition(p: Position) {
 }
 
 function tierBadge(tier: PerformanceTier) {
-  if (tier === "top")      return { bg: "#A03123", label: "Top Scholar" };
-  if (tier === "underdog") return { bg: "#6A737B", label: "Underdog" };
-  return                          { bg: "#666666", label: "Average" };
+  if (tier === "top")      return { bg: "#A03123", label: "Top Scholar", short: "Top" };
+  if (tier === "underdog") return { bg: "#6A737B", label: "Underdog",   short: "Und" };
+  return                          { bg: "#666666", label: "Average",    short: "Avg" };
 }
 
 const totalEstVal = currentPositions.reduce((acc, p) => acc + calcPosition(p).estTotal, 0);
@@ -227,28 +227,31 @@ function PositionRow({ p, muted }: { p: Position; muted?: boolean }) {
           </div>
         </td>
         <td style={{ padding: "14px 12px", borderBottom: "1px solid #f0f0f0", textAlign: "center" }}>
-          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: muted ? "#e8e8e8" : tier.bg, color: muted ? "#888" : "#fff", whiteSpace: "nowrap" }}>
-            {tier.label}
+          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: muted ? "#e8e8e8" : tier.bg, color: muted ? "#888" : "#fff", display: "inline-block", maxWidth: "100%", boxSizing: "border-box" as const }}>
+            <span className="ro-tier-full">{tier.label}</span>
+            <span className="ro-tier-short" style={{ display: "none" }}>{tier.short}</span>
           </span>
         </td>
-        <td style={{ padding: "14px 12px", borderBottom: "1px solid #f0f0f0", textAlign: "right" }}>
+        <td className="ro-col-hide" style={{ padding: "14px 12px", borderBottom: "1px solid #f0f0f0", textAlign: "right" }}>
           {p.yes_shares > 0
             ? <span style={{ fontSize: 13, fontWeight: 800, color: muted ? "#aaa" : "#2d8a4e" }}>{p.yes_shares}</span>
             : <span style={{ fontSize: 12, color: "#ddd" }}>—</span>}
         </td>
-        <td style={{ padding: "14px 12px", borderBottom: "1px solid #f0f0f0", textAlign: "right" }}>
+        <td className="ro-col-hide" style={{ padding: "14px 28px 14px 28px", borderBottom: "1px solid #f0f0f0", textAlign: "right" }}>
           {p.no_shares > 0
             ? <span style={{ fontSize: 13, fontWeight: 800, color: muted ? "#aaa" : "#E31837" }}>{p.no_shares}</span>
             : <span style={{ fontSize: 12, color: "#ddd" }}>—</span>}
         </td>
-        <td style={{ padding: "14px 12px", borderBottom: "1px solid #f0f0f0", textAlign: "right" }}>
+        <td className="ro-col-hide" style={{ padding: "14px 12px", borderBottom: "1px solid #f0f0f0", textAlign: "right" }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: muted ? "#888" : "#111" }}>{estTotal.toFixed(0)} RT</span>
         </td>
-        <td style={{ padding: "14px 12px", borderBottom: "1px solid #f0f0f0", textAlign: "right" }}>
+        <td className="ro-col-hide" style={{ padding: "14px 12px", borderBottom: "1px solid #f0f0f0", textAlign: "right" }}>
           {muted && p.outcome ? (
-            <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 99, background: isWon ? "#e6f4ec" : "#fdecea", color: isWon ? "#2d8a4e" : "#B10202" }}>
-              {isWon ? "\u2713 WON" : "\u2717 LOST"}
-            </span>
+            <div style={{ minHeight: 36, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+              <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 99, background: isWon ? "#e6f4ec" : "#fdecea", color: isWon ? "#2d8a4e" : "#B10202" }}>
+                {isWon ? "\u2713 WON" : "\u2717 LOST"}
+              </span>
+            </div>
           ) : (
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: pnl >= 0 ? "#2d8a4e" : "#E31837" }}>
@@ -265,52 +268,134 @@ function PositionRow({ p, muted }: { p: Position; muted?: boolean }) {
 
       {expanded && (
         <tr style={{ background: muted ? "#f9f9f9" : "#fffafa" }}>
-          <td colSpan={7} style={{ padding: "0 20px 16px 28px", borderBottom: "1px solid #f0f0f0" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginTop: 12 }}>
+          <td colSpan={7} style={{ padding: "0 16px 16px 16px", borderBottom: "1px solid #f0f0f0" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
 
-              {/* Market Price card */}
-              <div style={{ background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: "12px 14px" }}>
-                <div style={{ fontSize: 9, color: "#9FA1A4", textTransform: "uppercase", letterSpacing: 2, marginBottom: 8, fontWeight: 700 }}>Market Price</div>
-                <ProbBar yp={yp} muted={muted} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#9FA1A4", marginTop: 6 }}>
-                  <span>YES: {p.yes_pool.toLocaleString()} RT</span>
-                  <span>NO: {p.no_pool.toLocaleString()} RT</span>
+              {/* Mobile-only quick stats strip — hidden on desktop */}
+              <div className="ro-mobile-summary" style={{ display: "none", background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: "10px 14px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 8, color: "#9FA1A4", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 600 }}>
+                      {p.yes_shares > 0 ? "YES Shares" : "NO Shares"}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: p.yes_shares > 0 ? (muted ? "#aaa" : "#2d8a4e") : (muted ? "#aaa" : "#E31837"), marginTop: 1 }}>
+                      {p.yes_shares > 0 ? p.yes_shares : p.no_shares}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 8, color: "#9FA1A4", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 600 }}>Est. Value</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: muted ? "#888" : "#111", marginTop: 1 }}>{estTotal.toFixed(0)} RT</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    {muted && p.outcome ? (
+                      <>
+                        <div style={{ fontSize: 8, color: "#9FA1A4", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 600 }}>Outcome</div>
+                        <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 99, background: isWon ? "#e6f4ec" : "#fdecea", color: isWon ? "#2d8a4e" : "#B10202", display: "inline-block", marginTop: 3 }}>
+                          {isWon ? "✓ WON" : "✗ LOST"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 8, color: "#9FA1A4", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 600 }}>PnL</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: pnl >= 0 ? "#2d8a4e" : "#E31837", marginTop: 1 }}>
+                          {pnl >= 0 ? "+" : ""}{pnl.toFixed(0)} RT
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* YES Position card — Entry/Now removed, just Shares / Cost / Value / PnL */}
-              {p.yes_shares > 0 && (
-                <div style={{ background: "#f0faf4", border: "1px solid #b6dfca", borderRadius: 10, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 9, color: "#2d8a4e", textTransform: "uppercase", letterSpacing: 2, marginBottom: 8, fontWeight: 700 }}>YES Position</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <MiniStat label="Shares" value={p.yes_shares.toString()} />
-                    <MiniStat label="Cost" value={`${(p.yes_shares * p.yes_entry_price).toFixed(0)} RT`} />
-                    <MiniStat label="Value" value={`${yesEstVal.toFixed(0)} RT`} color="#2d8a4e" />
-                    <MiniStat
-                      label="PnL"
-                      value={`${(yesEstVal - p.yes_shares * p.yes_entry_price) >= 0 ? "+" : ""}${(yesEstVal - p.yes_shares * p.yes_entry_price).toFixed(0)} RT`}
-                      color={(yesEstVal - p.yes_shares * p.yes_entry_price) >= 0 ? "#2d8a4e" : "#E31837"}
-                    />
+              {/* Outcome banner for resolved positions */}
+              {muted && p.outcome && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 14px", borderRadius: 10,
+                  background: isWon ? "#e6f4ec" : "#fdecea",
+                  border: `1px solid ${isWon ? "#b6dfca" : "#f5b8b2"}`,
+                }}>
+                  <div style={{
+                    fontSize: 18, width: 32, height: 32, borderRadius: "50%",
+                    background: isWon ? "#2d8a4e" : "#B10202",
+                    display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0,
+                  }}>
+                    {isWon ? "✓" : "✗"}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: isWon ? "#2d8a4e" : "#B10202" }}>
+                      {isWon ? "Position Won" : "Position Lost"}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#666", marginTop: 1 }}>
+                      Resolved <strong style={{ color: p.outcome === "yes" ? "#2d8a4e" : "#B10202" }}>{p.outcome!.toUpperCase()}</strong>
+                      {" · "}You bet <strong style={{ color: (p.yes_shares > 0 ? "#2d8a4e" : "#B10202") }}>
+                        {p.yes_shares > 0 ? "YES" : "NO"}
+                      </strong>
+                      {" · "}
+                      {isWon ? "Payout credited to wallet" : "Shares forfeited"}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* NO Position card — Entry/Now removed, just Shares / Cost / Value / PnL */}
-              {p.no_shares > 0 && (
-                <div style={{ background: "#fff5f5", border: "1px solid #f5b8b2", borderRadius: 10, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 9, color: "#B10202", textTransform: "uppercase", letterSpacing: 2, marginBottom: 8, fontWeight: 700 }}>NO Position</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <MiniStat label="Shares" value={p.no_shares.toString()} />
-                    <MiniStat label="Cost" value={`${(p.no_shares * p.no_entry_price).toFixed(0)} RT`} />
-                    <MiniStat label="Value" value={`${noEstVal.toFixed(0)} RT`} color="#E31837" />
-                    <MiniStat
-                      label="PnL"
-                      value={`${(noEstVal - p.no_shares * p.no_entry_price) >= 0 ? "+" : ""}${(noEstVal - p.no_shares * p.no_entry_price).toFixed(0)} RT`}
-                      color={(noEstVal - p.no_shares * p.no_entry_price) >= 0 ? "#2d8a4e" : "#E31837"}
-                    />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+
+                {/* Market Price card */}
+                <div style={{ background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 9, color: "#9FA1A4", textTransform: "uppercase", letterSpacing: 2, marginBottom: 8, fontWeight: 700 }}>Market Price</div>
+                  <ProbBar yp={yp} muted={muted} />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#9FA1A4", marginTop: 6 }}>
+                    <span>YES pool: {p.yes_pool.toLocaleString()} RT</span>
+                    <span>NO pool: {p.no_pool.toLocaleString()} RT</span>
                   </div>
                 </div>
-              )}
+
+                {/* Single position card — shows only the side held */}
+                {(() => {
+                  const heldYes = p.yes_shares > 0;
+                  const shares = heldYes ? p.yes_shares : p.no_shares;
+                  const cost = heldYes ? p.yes_shares * p.yes_entry_price : p.no_shares * p.no_entry_price;
+                  const estVal = heldYes ? yesEstVal : noEstVal;
+                  const positionPnl = estVal - cost;
+                  const correct = muted && p.outcome ? (heldYes ? p.outcome === "yes" : p.outcome === "no") : null;
+                  return (
+                    <div style={{
+                      background: heldYes ? "#f0faf4" : "#fff5f5",
+                      borderRadius: 10, padding: "12px 14px",
+                      border: muted && correct !== null
+                        ? `2px solid ${correct ? (heldYes ? "#2d8a4e" : "#B10202") : "#ccc"}`
+                        : `1px solid ${heldYes ? "#b6dfca" : "#f5b8b2"}`,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                        <span style={{
+                          fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 99, letterSpacing: 1,
+                          background: heldYes ? "#2d8a4e" : "#B10202", color: "#fff",
+                        }}>
+                          BET {heldYes ? "YES" : "NO"}
+                        </span>
+                        {muted && p.outcome && correct !== null && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 99, letterSpacing: 1,
+                            background: correct ? "#e6f4ec" : "#fdecea",
+                            color: correct ? "#2d8a4e" : "#B10202",
+                          }}>
+                            {correct ? "✓ CORRECT" : "✗ WRONG"}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <MiniStat label="Shares" value={shares.toString()} />
+                        <MiniStat label="Cost" value={`${cost.toFixed(0)} RT`} />
+                        <MiniStat label="Value" value={`${estVal.toFixed(0)} RT`} color={heldYes ? "#2d8a4e" : "#E31837"} />
+                        <MiniStat
+                          label="PnL"
+                          value={`${positionPnl >= 0 ? "+" : ""}${positionPnl.toFixed(0)} RT`}
+                          color={positionPnl >= 0 ? "#2d8a4e" : "#E31837"}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </td>
         </tr>
@@ -333,10 +418,26 @@ export default function PortfolioPage() {
         .ro-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; max-width: 1100px; margin: 24px auto; padding: 0 20px 48px; }
         @media (max-width: 860px) { .ro-layout { grid-template-columns: 1fr; } }
         .ro-table-wrap { overflow-x: auto; }
-        .ro-table { width: 100%; border-collapse: collapse; }
+        .ro-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .ro-table th { font-size: 9px; font-weight: 700; color: #9FA1A4; text-transform: uppercase; letter-spacing: 2px; padding: 10px 12px; text-align: right; border-bottom: 2px solid #eee; white-space: nowrap; background: #fafafa; }
-        .ro-table th:first-child { text-align: left; }
-        .ro-table th:nth-child(2) { text-align: center; }
+        .ro-table th:first-child { text-align: left; width: 30%; }
+        .ro-table th:nth-child(2) { text-align: center; width: 11%; }
+        .ro-table th:nth-child(3) { width: 9%; padding-right: 8px; }
+        .ro-table th:nth-child(4) { width: 12%; padding-left: 28px; text-align: right; }
+        .ro-table th:nth-child(5) { width: 13%; }
+        .ro-table th:nth-child(6) { width: 14%; }
+        .ro-table th:nth-child(7) { width: 5%; }
+        .ro-table td { overflow: hidden; text-overflow: ellipsis; }
+        @media (max-width: 600px) {
+          .ro-table th:first-child { width: 70%; }
+          .ro-table th:nth-child(2) { width: 20%; text-align: right; }
+          .ro-table th:nth-child(7) { width: 10%; }
+          .ro-col-hide { display: none; }
+          .ro-col-tier th, .ro-col-tier td { text-align: right !important; }
+          .ro-mobile-summary { display: block !important; }
+          .ro-tier-full { display: none; }
+          .ro-tier-short { display: inline !important; }
+        }
       `}</style>
 
       {/* Hero */}
@@ -461,10 +562,10 @@ export default function PortfolioPage() {
                     <tr>
                       <th style={{ textAlign: "left" }}>Contract</th>
                       <th style={{ textAlign: "center" }}>Tier</th>
-                      <th>YES Shares</th>
-                      <th>NO Shares</th>
-                      <th>Est. Value</th>
-                      <th>{tab === "current" ? "PnL" : "Outcome"}</th>
+                      <th className="ro-col-hide">YES Shares</th>
+                      <th className="ro-col-hide">NO Shares</th>
+                      <th className="ro-col-hide">Est. Value</th>
+                      <th className="ro-col-hide">{tab === "current" ? "PnL" : "Outcome"}</th>
                       <th></th>
                     </tr>
                   </thead>
