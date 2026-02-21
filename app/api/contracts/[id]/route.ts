@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
 
-// GET /api/contracts/:id
+type Params = Promise<{ id: string }>;
+
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Params }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json({ ok: false, error: "Contract ID is required." }, { status: 400 });
@@ -27,13 +28,11 @@ export async function GET(
       return NextResponse.json({ ok: false, error: "Contract not found." }, { status: 404 });
     }
 
-    // calculate current live price from real pools + seed
     const yesPool  = contract.yes_token_pool + contract.seed_tokens;
     const noPool   = contract.no_token_pool  + contract.seed_tokens;
     const priceYes = yesPool / (yesPool + noPool);
     const priceNo  = parseFloat((1 - priceYes).toFixed(4));
 
-    // fetch recent trades for this contract
     const { data: recentTrades } = await adminClient
       .from("trades")
       .select("id, side, tokens_spent, shares_received, fee, price_yes_at_trade, price_no_at_trade, created_at")
