@@ -10,8 +10,6 @@ export async function GET() {
 
 const profile = profiles?.[0] ?? null;
 
-console.log("profile found:", profile);
-console.log("profile id:", profile?.id);  // verify id exists
 
 if (!profile || !profile.id) {
   return NextResponse.json({ ok: false, error: "No trader found." }, { status: 404 });
@@ -46,11 +44,7 @@ const [walletResult, positionsResult, tradesResult] = await Promise.all([
     .limit(20),
 ]);
 
-  console.log("wallet:", walletResult.data);
-  console.log("walletError:", walletResult.error);
-  console.log("positions:", positionsResult.data);
-  console.log("trades:", tradesResult.data);
-
+  
   if (!walletResult.data) {
     return NextResponse.json({ ok: false, error: "Wallet not found." }, { status: 404 });
   }
