@@ -1,297 +1,151 @@
-// src/lib/market.ts
 import { adminClient } from "@/lib/supabase/admin";
-import { calculateFee, sharesFromSpend } from "@/lib/amm";
-import { TradeInput, TradeResult } from "@/types/trade";
+import { calculateFee } from "@/lib/amm";
 
-const STARTING_BALANCE = 10_000;
-const FEE_PCT = 0.005;
+type TradeSide = "yes" | "no";
+type TradeAction = "buy" | "sell";
 
-type DbWallet = {
-  id: string;
-  user_id: string;
-  balance_tokens: number;
-};
-
-type DbContract = {
-  id: string;
-  yes_token_pool: number;
-  no_token_pool: number;
-  seed_tokens: number;
-  total_token_pool: number | null;
-  yes_shares_outstanding: number | null;
-  no_shares_outstanding: number | null;
-  status: string;
-  end_date: string | null;
-};
-
-type DbPosition = {
-  id: string;
-  user_id: string;
-  contract_id: string;
-  yes_shares: number;
-  no_shares: number;
-  status: string | null;
-};
-
-function asInt(n: number) {
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(n);
-}
-
-function ensureTradable(contract: DbContract) {
-  if (contract.status !== "active") throw new Error("Contract is not active.");
-  if (contract.end_date) {
-    const endMs = new Date(contract.end_date).getTime();
-    if (Number.isFinite(endMs) && endMs <= Date.now()) throw new Error("Contract has expired.");
+function assertUuid(id: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    throw new Error(`Invalid UUID: ${id}`);
   }
 }
 
-async function getOrCreateWallet(userId: string): Promise<DbWallet> {
-  const { data: existing, error: selErr } = await adminClient
-    .from("wallets")
-    .select("id,user_id,balance_tokens")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (selErr) throw new Error(selErr.message);
-  if (existing) {
-    return {
-      id: existing.id,
-      user_id: existing.user_id,
-      balance_tokens: Number(existing.balance_tokens),
-    };
-  }
-
-  const { data: created, error: insErr } = await adminClient
-    .from("wallets")
-    .insert({ user_id: userId, balance_tokens: STARTING_BALANCE })
-    .select("id,user_id,balance_tokens")
-    .single();
-
-  if (insErr || !created) throw new Error(insErr?.message ?? "Failed to create wallet.");
-  return {
-    id: created.id,
-    user_id: created.user_id,
-    balance_tokens: Number(created.balance_tokens),
-  };
-}
-
-async function getContractOrThrow(contractId: string): Promise<DbContract> {
-  const { data, error } = await adminClient
-    .from("contracts")
-    .select(
-      "id,yes_token_pool,no_token_pool,seed_tokens,total_token_pool,yes_shares_outstanding,no_shares_outstanding,status,end_date",
-    )
-    .eq("id", contractId)
-    .single();
-
-  if (error || !data) throw new Error("Contract not found.");
-
-  return {
-    id: data.id,
-    yes_token_pool: Number(data.yes_token_pool),
-    no_token_pool: Number(data.no_token_pool),
-    seed_tokens: Number(data.seed_tokens),
-    total_token_pool: data.total_token_pool === null ? null : Number(data.total_token_pool),
-    yes_shares_outstanding: data.yes_shares_outstanding === null ? null : Number(data.yes_shares_outstanding),
-    no_shares_outstanding: data.no_shares_outstanding === null ? null : Number(data.no_shares_outstanding),
-    status: String(data.status),
-    end_date: data.end_date ? String(data.end_date) : null,
-  };
-}
-
-async function getOrCreatePosition(userId: string, contractId: string): Promise<DbPosition> {
-  const { data: existing, error: selErr } = await adminClient
-    .from("positions")
-    .select("id,user_id,contract_id,yes_shares,no_shares,status")
-    .eq("user_id", userId)
-    .eq("contract_id", contractId)
-    .maybeSingle();
-
-  if (selErr) throw new Error(selErr.message);
-  if (existing) {
-    return {
-      id: existing.id,
-      user_id: existing.user_id,
-      contract_id: existing.contract_id,
-      yes_shares: Number(existing.yes_shares),
-      no_shares: Number(existing.no_shares),
-      status: existing.status ?? null,
-    };
-  }
-
-  const { data: created, error: insErr } = await adminClient
-    .from("positions")
-    .insert({
-      user_id: userId,
-      contract_id: contractId,
-      yes_shares: 0,
-      no_shares: 0,
-      status: "open",
-      realized_pnl: 0,
-    })
-    .select("id,user_id,contract_id,yes_shares,no_shares,status")
-    .single();
-
-  if (insErr || !created) throw new Error(insErr?.message ?? "Failed to create position.");
-  return {
-    id: created.id,
-    user_id: created.user_id,
-    contract_id: created.contract_id,
-    yes_shares: Number(created.yes_shares),
-    no_shares: Number(created.no_shares),
-    status: created.status ?? null,
-  };
-}
-
-function livePools(contract: DbContract) {
-  const yesLive = contract.yes_token_pool + contract.seed_tokens;
-  const noLive = contract.no_token_pool + contract.seed_tokens;
-  return { yesLive, noLive };
-}
-
-function priceYesFromPools(yesLive: number, noLive: number) {
-  const denom = yesLive + noLive;
+function priceYesFromPools(yesPool: number, noPool: number) {
+  const denom = yesPool + noPool;
   if (denom <= 0) return 0.5;
-  return yesLive / denom;
+  return yesPool / denom;
 }
 
-export async function executeTrade(userId: string, input: TradeInput): Promise<TradeResult> {
-  // Load entities
-  const wallet = await getOrCreateWallet(userId);
-  const contract = await getContractOrThrow(input.contractId);
-  const position = await getOrCreatePosition(userId, input.contractId);
+function sharesFromSpend(price: number, spendTokens: number) {
+  const safe = Math.max(price, 0.01);
+  return spendTokens / safe;
+}
 
-  ensureTradable(contract);
+function ensureTradable(status: string, endDate: string | null) {
+  if (status !== "active") throw new Error("Contract is not active.");
+  if (endDate && new Date(endDate).getTime() <= Date.now()) throw new Error("Contract has expired.");
+}
 
-  const amountTokens = asInt(input.amountTokens);
-  if (amountTokens <= 0) throw new Error("amountTokens must be positive.");
+export async function executeTrade(
+  userId: string,
+  input: { contractId: string; side: TradeSide; action: TradeAction; amountTokens: number }
+) {
+  assertUuid(userId);
+  assertUuid(input.contractId);
 
-  const fee = asInt(calculateFee(amountTokens)); // your amm fee fn; schema stores int4
-  const totalDebit = amountTokens + fee;
+  // Fetch contract
+  const { data: contract, error: cErr } = await adminClient
+    .from("contracts")
+    .select("id,status,end_date,seed_tokens,yes_token_pool,no_token_pool")
+    .eq("id", input.contractId)
+    .single();
 
-  const { yesLive, noLive } = livePools(contract);
-  const priceYesBefore = priceYesFromPools(yesLive, noLive);
-  const priceNoBefore = 1 - priceYesBefore;
+  if (cErr || !contract) throw new Error("Contract not found.");
+  ensureTradable(contract.status, contract.end_date);
 
-  // Shares from your AMM uses yesPool/noPool — we feed LIVE pools (includes seed)
-  const ammLikeContract = {
-    id: contract.id,
-    yesPool: yesLive,
-    noPool: noLive,
-    status: contract.status,
-    endDate: contract.end_date ?? new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
-  } as any;
+  const seed = Number(contract.seed_tokens ?? 0);
+  const yesPool = Number(contract.yes_token_pool ?? 0) + seed;
+  const noPool = Number(contract.no_token_pool ?? 0) + seed;
+
+  const priceYes = priceYesFromPools(yesPool, noPool);
+  const priceNo = Number((1 - priceYes).toFixed(4));
+
+  // Fetch wallet
+  const { data: wallet, error: wErr } = await adminClient
+    .from("wallets")
+    .select("id,user_id,balance_tokens")
+    .eq("user_id", userId)
+    .single();
+
+  if (wErr || !wallet) throw new Error("Wallet not found.");
+
+  const fee = calculateFee(input.amountTokens);
 
   if (input.action !== "buy") {
-    throw new Error("Only buy is supported in MVP.");
+    throw new Error("Sell not implemented in demo build.");
   }
 
-  if (wallet.balance_tokens < totalDebit) {
-    throw new Error("Insufficient wallet balance for trade and fee.");
+  const totalDebit = input.amountTokens + fee;
+  if (Number(wallet.balance_tokens) < totalDebit) throw new Error("Insufficient wallet balance.");
+
+  const pSide = input.side === "yes" ? priceYes : 1 - priceYes;
+  const shares = sharesFromSpend(pSide, input.amountTokens);
+
+  // Upsert position
+  const { data: posExisting } = await adminClient
+    .from("positions")
+    .select("id,user_id,contract_id,yes_shares,no_shares")
+    .eq("user_id", userId)
+    .eq("contract_id", input.contractId)
+    .maybeSingle();
+
+  const yesSharesNew =
+    Number(posExisting?.yes_shares ?? 0) + (input.side === "yes" ? shares : 0);
+  const noSharesNew =
+    Number(posExisting?.no_shares ?? 0) + (input.side === "no" ? shares : 0);
+
+  if (!posExisting) {
+    const { error: insPosErr } = await adminClient.from("positions").insert({
+      user_id: userId,
+      contract_id: input.contractId,
+      yes_shares: input.side === "yes" ? shares : 0,
+      no_shares: input.side === "no" ? shares : 0,
+    });
+    if (insPosErr) throw new Error(insPosErr.message);
+  } else {
+    const { error: updPosErr } = await adminClient
+      .from("positions")
+      .update({ yes_shares: yesSharesNew, no_shares: noSharesNew })
+      .eq("id", posExisting.id);
+    if (updPosErr) throw new Error(updPosErr.message);
   }
-
-  const sharesFloat = sharesFromSpend(ammLikeContract, input.side, amountTokens);
-  const sharesReceived = asInt(sharesFloat);
-  if (sharesReceived <= 0) throw new Error("Trade amount too small to receive shares.");
-
-  // Update pools (write ONLY real pools; seed stays separate)
-  const newYesTokenPool =
-    input.side === "yes" ? contract.yes_token_pool + amountTokens : contract.yes_token_pool;
-
-  const newNoTokenPool =
-    input.side === "no" ? contract.no_token_pool + amountTokens : contract.no_token_pool;
-
-  const yesAfterLive = newYesTokenPool + contract.seed_tokens;
-  const noAfterLive = newNoTokenPool + contract.seed_tokens;
-
-  // Update position shares
-  const newYesShares = input.side === "yes" ? position.yes_shares + sharesReceived : position.yes_shares;
-  const newNoShares = input.side === "no" ? position.no_shares + sharesReceived : position.no_shares;
 
   // Update wallet
-  const newWalletBalance = wallet.balance_tokens - totalDebit;
-
-  // Write contract updates
-  const totalTokenPool = newYesTokenPool + newNoTokenPool + contract.seed_tokens * 2;
-
-  const yesSharesOut = (contract.yes_shares_outstanding ?? 0) + (input.side === "yes" ? sharesReceived : 0);
-  const noSharesOut = (contract.no_shares_outstanding ?? 0) + (input.side === "no" ? sharesReceived : 0);
-
-  const { error: cErr } = await adminClient
-    .from("contracts")
-    .update({
-      yes_token_pool: newYesTokenPool,
-      no_token_pool: newNoTokenPool,
-      total_token_pool: totalTokenPool,
-      yes_shares_outstanding: yesSharesOut,
-      no_shares_outstanding: noSharesOut,
-    })
-    .eq("id", contract.id);
-
-  if (cErr) throw new Error(cErr.message);
-
-  // Write wallet update
-  const { error: wErr } = await adminClient
+  const newBalance = Number(wallet.balance_tokens) - totalDebit;
+  const { error: updWalletErr } = await adminClient
     .from("wallets")
-    .update({ balance_tokens: newWalletBalance })
+    .update({ balance_tokens: newBalance })
     .eq("id", wallet.id);
+  if (updWalletErr) throw new Error(updWalletErr.message);
 
-  if (wErr) throw new Error(wErr.message);
+  // Update contract pools (stored pools exclude seed)
+  const yesTokenPoolNew =
+    Number(contract.yes_token_pool ?? 0) + (input.side === "yes" ? input.amountTokens : 0);
+  const noTokenPoolNew =
+    Number(contract.no_token_pool ?? 0) + (input.side === "no" ? input.amountTokens : 0);
 
-  // Write position update
-  const { error: pErr } = await adminClient
-    .from("positions")
-    .update({
-      yes_shares: newYesShares,
-      no_shares: newNoShares,
-      status: "open",
-    })
-    .eq("id", position.id);
+  const { error: updContractErr } = await adminClient
+    .from("contracts")
+    .update({ yes_token_pool: yesTokenPoolNew, no_token_pool: noTokenPoolNew })
+    .eq("id", contract.id);
+  if (updContractErr) throw new Error(updContractErr.message);
 
-  if (pErr) throw new Error(pErr.message);
-
-  // Insert trade (matches your schema)
-  const { data: trade, error: tErr } = await adminClient
-    .from("trades")
-    .insert({
-      user_id: userId,
-      contract_id: contract.id,
-      side: input.side,
-      tokens_spent: amountTokens,
-      shares_received: sharesReceived,
-      fee,
-      fee_percent_at_trade: FEE_PCT,
-      price_yes_at_trade: priceYesBefore,
-      price_no_at_trade: priceNoBefore,
-      yes_pool_after: yesAfterLive,
-      no_pool_after: noAfterLive,
-    })
-    .select("id")
-    .single();
-
-  if (tErr) throw new Error(tErr.message);
-
-  // Insert wallet transaction (debit)
-  const { error: wtErr } = await adminClient.from("wallet_transactions").insert({
-    wallet_id: wallet.id,
-    amount: -totalDebit,
-    balance_after: newWalletBalance,
-    type: "trade_buy",
-    reference_id: trade?.id ?? null,
+  // Insert trade record
+  const { error: tradeErr } = await adminClient.from("trades").insert({
+    user_id: userId,
+    contract_id: input.contractId,
+    side: input.side,
+    action: input.action,
+    tokens_spent: input.amountTokens,
+    shares_received: shares,
+    fee,
+    price_yes_at_trade: priceYes,
+    price_no_at_trade: priceNo,
   });
+  if (tradeErr) throw new Error(tradeErr.message);
 
-  if (wtErr) throw new Error(wtErr.message);
-
-  const pYesAfter = priceYesFromPools(yesAfterLive, noAfterLive);
+  // Return fresh “computed” pools including seed (for UI)
+  const yesPoolAfter = yesTokenPoolNew + seed;
+  const noPoolAfter = noTokenPoolNew + seed;
+  const pYesAfter = priceYesFromPools(yesPoolAfter, noPoolAfter);
 
   return {
     contractId: contract.id,
-    yesPool: yesAfterLive,
-    noPool: noAfterLive,
+    yesPool: yesPoolAfter,
+    noPool: noPoolAfter,
     pYes: pYesAfter,
-    walletBalance: newWalletBalance,
-    position: { yesShares: newYesShares, noShares: newNoShares },
+    walletBalance: newBalance,
     feeCharged: fee,
+    sharesReceived: shares,
   };
 }
