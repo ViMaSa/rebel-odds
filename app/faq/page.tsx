@@ -260,19 +260,7 @@ export default function FAQPage() {
             </div>
           ))
         )}
-
-        {/* Still have questions */}
-        <div style={{ background: "#1e1e1e", borderRadius: 16, padding: "36px 32px", textAlign: "center", marginTop: 16 }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>💬</div>
-          <h3 style={{ color: "#fff", fontWeight: 900, fontFamily: "Georgia,serif", fontSize: 20, margin: "0 0 10px" }}>Still have questions?</h3>
-          <p style={{ color: "#9FA1A4", fontSize: 13, margin: "0 0 20px", lineHeight: 1.6 }}>
-            Can&apos;t find what you&apos;re looking for? The Rebel Odds team is happy to help.
-          </p>
-          <a href="mailto:support@rebelodds.xyz"
-            style={{ display: "inline-block", padding: "12px 28px", background: "#E31837", color: "#fff", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-            Contact Support
-          </a>
-        </div>
+        
       </div>
 
       {/* Disclaimer */}
