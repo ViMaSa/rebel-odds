@@ -228,11 +228,12 @@ export default function FAQPage() {
         </div>
       </div>
 
-      {/* Quick links */}
+      {/* Quick links — centered wrap, 3 on top then 2 centered */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "16px 20px", display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ maxWidth: 860, margin: "0 auto", padding: "16px 20px", display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
           {categories.map(cat => (
             <a key={cat.title} href={`#${cat.title}`}
+              className="ro-faq-pill"
               style={{ fontSize: 11, fontWeight: 700, padding: "6px 14px", borderRadius: 99, background: "#f5f5f5", color: "#555", textDecoration: "none", transition: "all .15s", border: "1px solid #e8e8e8" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#E31837"; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#f5f5f5"; (e.currentTarget as HTMLElement).style.color = "#555"; }}>
@@ -260,19 +261,6 @@ export default function FAQPage() {
             </div>
           ))
         )}
-
-        {/* Still have questions */}
-        <div style={{ background: "#1e1e1e", borderRadius: 16, padding: "36px 32px", textAlign: "center", marginTop: 16 }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>💬</div>
-          <h3 style={{ color: "#fff", fontWeight: 900, fontFamily: "Georgia,serif", fontSize: 20, margin: "0 0 10px" }}>Still have questions?</h3>
-          <p style={{ color: "#9FA1A4", fontSize: 13, margin: "0 0 20px", lineHeight: 1.6 }}>
-            Can&apos;t find what you&apos;re looking for? The Rebel Odds team is happy to help.
-          </p>
-          <a href="mailto:support@rebelodds.xyz"
-            style={{ display: "inline-block", padding: "12px 28px", background: "#E31837", color: "#fff", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-            Contact Support
-          </a>
-        </div>
       </div>
 
       {/* Disclaimer */}
@@ -281,6 +269,13 @@ export default function FAQPage() {
           ⚠️ <strong>Paper Trading Only.</strong> Rebel Tokens are virtual currency with no monetary value. For educational and demonstration purposes only.
         </p>
       </div>
+
+      <style>{`
+        /* Quick-link pills: 3 across naturally, then remaining centered */
+        .ro-faq-pill {
+          flex: 0 0 auto;
+        }
+      `}</style>
     </div>
   );
 }
