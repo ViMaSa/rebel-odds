@@ -39,7 +39,7 @@ export default function NavBar({ balance, rank }: { balance: number; rank: numbe
           <div style={{ height: 32, width: 1, background: "#333" }} />
           <div style={{ textAlign: "right" }}>
             <div style={{ color: "#E31837", fontWeight: 700, fontSize: 13 }}>{balance.toLocaleString()} RT</div>
-            <div style={{ color: "#9FA1A4", fontSize: 10 }}>Rank #{rank}</div>
+            <div style={{ color: "#9FA1A4", fontSize: 10 }}></div>
           </div>
           <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1a0000", border: "2px solid #E31837", display: "flex", alignItems: "center", justifyContent: "center", color: "#E31837", fontSize: 12, fontWeight: 700 }}>
             {mockUser.username[0].toUpperCase()}
