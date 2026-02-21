@@ -1,8 +1,7 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createBrowserClient } from "@supabase/ssr";
 
-//Frontend use
 export const createClient = () =>
   createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_PUBLISHABLE_KEY!
-  )
+  );

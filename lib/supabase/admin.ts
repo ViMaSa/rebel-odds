@@ -1,7 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-//Admin operations that bypass RLS
 export const adminClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_PUBLISHABLE_KEY!
-)
+  process.env.SUPABASE_SECRET_KEY!, // ✅ must be secret
+  {
+    auth: { persistSession: false },
+  }
+);
