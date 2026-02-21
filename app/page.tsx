@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -31,45 +32,45 @@ interface TierBadge {
   label: string;
 }
 
-// ── Mock Data ──────────────────────────────────────────────────────────────
-const mockContracts: Contract[] = [
-  {
-    id: "1",
-    title: "Will Alex finish with GPA ≥ 3.5?",
-    student: { name: "Alex Rivera", major: "Computer Science", standing: "Junior", performance_tier: "top" },
-    yes_pool: 7200, no_pool: 2800, type: "gpa", status: "active", end_date: "2025-05-10", volume: 10000,
-  },
-  {
-    id: "2",
-    title: "Will Jordan pass CS326?",
-    student: { name: "Jordan Kim", major: "Software Engineering", standing: "Sophomore", performance_tier: "average" },
-    yes_pool: 4100, no_pool: 5900, type: "course", status: "active", end_date: "2025-05-14", volume: 10000,
-  },
-  {
-    id: "3",
-    title: "Will Sam complete 15 credits this semester?",
-    student: { name: "Sam Okafor", major: "Business", standing: "Freshman", performance_tier: "underdog" },
-    yes_pool: 3300, no_pool: 6700, type: "credits", status: "active", end_date: "2025-05-08", volume: 10000,
-  },
-  {
-    id: "4",
-    title: "Will Maya maintain Dean's List status?",
-    student: { name: "Maya Patel", major: "Biology", standing: "Senior", performance_tier: "top" },
-    yes_pool: 8500, no_pool: 1500, type: "gpa", status: "active", end_date: "2025-05-12", volume: 10000,
-  },
-  {
-    id: "5",
-    title: "Will Chris pass MATH201?",
-    student: { name: "Chris Nguyen", major: "Physics", standing: "Junior", performance_tier: "underdog" },
-    yes_pool: 2900, no_pool: 7100, type: "course", status: "active", end_date: "2025-05-15", volume: 10000,
-  },
-  {
-    id: "6",
-    title: "Will Priya earn honors in ECON301?",
-    student: { name: "Priya Singh", major: "Economics", standing: "Senior", performance_tier: "top" },
-    yes_pool: 6600, no_pool: 3400, type: "course", status: "active", end_date: "2025-05-11", volume: 10000,
-  },
-];
+// ── API shape (matches GET /api/contracts response) ────────────────────────
+interface APIContract {
+  id: string;
+  title: string;
+  type: ContractType;
+  status: string;
+  end_date: string | null;
+  yes_token_pool: number;
+  no_token_pool: number;
+  seed_tokens: number;
+  students: {
+    name: string;
+    major: string;
+    standing: string;
+    performance_tier: PerformanceTier;
+  } | null;
+}
+
+// Normalizes an API contract into the shape the UI expects
+function normalize(c: APIContract): Contract {
+  const yes_pool = c.yes_token_pool + (c.seed_tokens ?? 0);
+  const no_pool  = c.no_token_pool  + (c.seed_tokens ?? 0);
+  return {
+    id:       c.id,
+    title:    c.title,
+    type:     c.type,
+    status:   c.status,
+    end_date: c.end_date ?? "",
+    yes_pool,
+    no_pool,
+    volume:   yes_pool + no_pool,
+    student: {
+      name:             c.students?.name            ?? "Unknown",
+      major:            c.students?.major           ?? "Unknown",
+      standing:         c.students?.standing        ?? "Unknown",
+      performance_tier: c.students?.performance_tier ?? "average",
+    },
+  };
+}
 
 const mockUser = { username: "trader_hawk", balance: 9250, rank: 4 };
 
@@ -253,14 +254,53 @@ function ContractCard({ contract, onClick }: { contract: Contract; onClick: (c: 
 
 // ── Modal ──────────────────────────────────────────────────────────────────
 function Modal({ contract, onClose }: { contract: Contract; onClose: () => void }) {
-  const [side, setSide] = useState<"yes" | "no">("yes");
-  const [amount, setAmount] = useState("");
-  const tier     = tierBadge(contract.student.performance_tier);
-  const price    = yesPrice(contract.yes_pool, contract.no_pool);
-  const curPrice = side === "yes" ? price : 1 - price;
+  const router = useRouter();
+  const [side, setSide]           = useState<"yes" | "no">("yes");
+  const [amount, setAmount]       = useState("");
+  const [trading, setTrading]     = useState(false);
+  const [tradeError, setTradeError] = useState<string | null>(null);
+  const [tradeSuccess, setTradeSuccess] = useState<string | null>(null);
+
+  const tier      = tierBadge(contract.student.performance_tier);
+  const price     = yesPrice(contract.yes_pool, contract.no_pool);
+  const curPrice  = side === "yes" ? price : 1 - price;
   const estShares = amount ? (parseFloat(amount) / curPrice).toFixed(2) : "—";
   const fee       = amount ? (parseFloat(amount) * 0.005).toFixed(2) : "—";
-  const canTrade  = amount !== "" && parseFloat(amount) > 0;
+  const canTrade  = !trading && amount !== "" && parseFloat(amount) > 0;
+
+  async function handleTrade() {
+    if (!canTrade) return;
+    setTrading(true);
+    setTradeError(null);
+    setTradeSuccess(null);
+
+    try {
+      const res = await fetch("/api/trade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contractId:   contract.id,
+          side,
+          action:       "buy",
+          amountTokens: parseFloat(amount),
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!json.ok) {
+        setTradeError(json.error ?? "Trade failed. Please try again.");
+      } else {
+        setTradeSuccess(`✅ Bought ${estShares} ${side.toUpperCase()} shares for ${amount} RT!`);
+        setAmount("");
+        router.refresh();
+      }
+    } catch {
+      setTradeError("Network error. Please try again.");
+    } finally {
+      setTrading(false);
+    }
+  }
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "rgba(0,0,0,.75)", backdropFilter: "blur(4px)" }}>
@@ -298,17 +338,19 @@ function Modal({ contract, onClose }: { contract: Contract; onClose: () => void 
           {/* Trade */}
           <div>
             <div style={{ display: "flex", borderRadius: 12, overflow: "hidden", border: "1.5px solid #e0e0e0", marginBottom: 12 }}>
-              <button onClick={() => setSide("yes")} style={{ flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: side === "yes" ? "#2d8a4e" : "#fff", color: side === "yes" ? "#fff" : "#666", transition: "all .2s" }}>Buy YES</button>
-              <button onClick={() => setSide("no")}  style={{ flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: side === "no"  ? "#E31837" : "#fff", color: side === "no"  ? "#fff" : "#666", transition: "all .2s" }}>Buy NO</button>
+              <button onClick={() => { setSide("yes"); setTradeError(null); setTradeSuccess(null); }}
+                style={{ flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: side === "yes" ? "#2d8a4e" : "#fff", color: side === "yes" ? "#fff" : "#666", transition: "all .2s" }}>Buy YES</button>
+              <button onClick={() => { setSide("no");  setTradeError(null); setTradeSuccess(null); }}
+                style={{ flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: side === "no"  ? "#E31837" : "#fff", color: side === "no"  ? "#fff" : "#666", transition: "all .2s" }}>Buy NO</button>
             </div>
             <div style={{ position: "relative", marginBottom: 10 }}>
-              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Token amount..."
+              <input type="number" value={amount} onChange={(e) => { setAmount(e.target.value); setTradeError(null); setTradeSuccess(null); }}
+                placeholder="Token amount..."
                 style={{ width: "100%", border: "1.5px solid #e0e0e0", borderRadius: 12, padding: "12px 48px 12px 16px", fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "inherit", color: "#222" }}
                 onFocus={(e) => (e.target.style.borderColor = "#E31837")}
                 onBlur={(e) => (e.target.style.borderColor = "#e0e0e0")} />
               <span style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#9FA1A4", fontWeight: 700 }}>RT</span>
             </div>
-            <style>{`.ro-token-input::placeholder { color: #666; }`}</style>
             <div style={{ background: "#f8f8f8", borderRadius: 12, padding: "12px 14px", fontSize: 12, display: "flex", flexDirection: "column", gap: 6 }}>
               {([["Price per share", `${(curPrice * 100).toFixed(1)}%`], ["Est. shares", estShares], ["Fee (0.5%)", `${fee} RT`]] as [string, string][]).map(([k, v]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>
@@ -319,9 +361,13 @@ function Modal({ contract, onClose }: { contract: Contract; onClose: () => void 
             </div>
           </div>
 
-          <button disabled={!canTrade}
+          {/* Feedback */}
+          {tradeError   && <div style={{ background: "#fff0f0", border: "1px solid #E31837", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#B10202", fontWeight: 600 }}>⚠️ {tradeError}</div>}
+          {tradeSuccess && <div style={{ background: "#f0fff4", border: "1px solid #2d8a4e", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#1a5c33", fontWeight: 600 }}>{tradeSuccess}</div>}
+
+          <button onClick={handleTrade} disabled={!canTrade}
             style={{ width: "100%", padding: "13px 0", borderRadius: 12, fontWeight: 900, fontSize: 14, border: "none", cursor: canTrade ? "pointer" : "not-allowed", opacity: canTrade ? 1 : 0.4, background: side === "yes" ? "#2d8a4e" : "#E31837", color: "#fff", fontFamily: "Georgia,serif", transition: "opacity .2s" }}>
-            {side === "yes" ? "Buy YES Shares" : "Buy NO Shares"}
+            {trading ? "Placing trade…" : side === "yes" ? "Buy YES Shares" : "Buy NO Shares"}
           </button>
 
           <p style={{ textAlign: "center", fontSize: 10, color: "#9FA1A4", margin: 0 }}>⚠️ Paper trading only · Rebel Tokens have no cash value</p>
@@ -336,8 +382,22 @@ export default function Dashboard() {
   const [sort, setSort] = useState("trending");
   const [selected, setSelected] = useState<Contract | null>(null);
   const [search, setSearch] = useState("");
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
 
-  const sorted = [...mockContracts]
+  useEffect(() => {
+    fetch("/api/contracts")
+      .then((res) => res.json())
+      .then((json) => {
+        if (!json.ok) throw new Error(json.error ?? "Failed to load contracts");
+        setContracts((json.data as APIContract[]).map(normalize));
+      })
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const sorted = contracts
     .filter((c) =>
       c.title.toLowerCase().includes(search.toLowerCase()) ||
       c.student.name.toLowerCase().includes(search.toLowerCase())
@@ -394,7 +454,7 @@ export default function Dashboard() {
 
         {/* Stats */}
         <div className="ro-stats-grid" style={{ display: "grid", gap: 12, marginTop: -20, marginBottom: 24 }}>
-          <StatCard label="Active Markets" value="6" sub="Open for trading" />
+          <StatCard label="Active Markets" value={loading ? "…" : String(contracts.length)} sub="Open for trading" />
           <StatCard label="Your Balance" value="9,250 RT" sub="Available tokens" accent="#2d8a4e" />
           <StatCard label="Positions" value="3" sub="Open contracts" />
           <StatCard label="Your Rank" value="#4" sub="Global leaderboard" accent="#B10202" />
@@ -418,12 +478,17 @@ export default function Dashboard() {
         </div>
 
         {/* Grid */}
-        {sorted.length === 0
-          ? <div style={{ textAlign: "center", padding: "60px 0", color: "#9FA1A4" }}>No contracts match your search.</div>
-          : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 16, paddingBottom: 48 }}>
-              {sorted.map((c) => <ContractCard key={c.id} contract={c} onClick={setSelected} />)}
-            </div>
-        }
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "#9FA1A4" }}>Loading markets…</div>
+        ) : error ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "#E31837" }}>⚠️ {error}</div>
+        ) : sorted.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "#9FA1A4" }}>No contracts match your search.</div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 16, paddingBottom: 48 }}>
+            {sorted.map((c) => <ContractCard key={c.id} contract={c} onClick={setSelected} />)}
+          </div>
+        )}
 
         <div style={{ textAlign: "center", paddingBottom: 32 }}>
           <p style={{ fontSize: 10, color: "#9FA1A4", maxWidth: 400, margin: "0 auto" }}>
