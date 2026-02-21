@@ -7,6 +7,13 @@ export async function GET() {
     .select("user_id,balance_tokens")
     .order("balance_tokens", { ascending: false });
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, data });
+  if (error) {
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    data: data ?? [],
+    disclaimer: "Paper trading only. Rebel Tokens have no cash value.",
+  });
 }

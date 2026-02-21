@@ -3,10 +3,7 @@ import { adminClient } from "@/lib/supabase/admin";
 
 type Params = Promise<{ id: string }>;
 
-export async function GET(
-  request: Request,
-  { params }: { params: Params }
-) {
+export async function GET(request: Request, { params }: { params: Params }) {
   try {
     const { id } = await params;
 
@@ -16,11 +13,13 @@ export async function GET(
 
     const { data: contract, error } = await adminClient
       .from("contracts")
-      .select(`
+      .select(
+        `
         *,
         students(*),
         professors(*)
-      `)
+      `,
+      )
       .eq("id", id)
       .single();
 
@@ -28,11 +27,13 @@ export async function GET(
       return NextResponse.json({ ok: false, error: "Contract not found." }, { status: 404 });
     }
 
-    const yesPool  = contract.yes_token_pool + contract.seed_tokens;
-    const noPool   = contract.no_token_pool  + contract.seed_tokens;
+    // calculate current live price from real pools + seed
+    const yesPool = Number(contract.yes_token_pool ?? 0) + Number(contract.seed_tokens ?? 0);
+    const noPool = Number(contract.no_token_pool ?? 0) + Number(contract.seed_tokens ?? 0);
     const priceYes = yesPool / (yesPool + noPool);
-    const priceNo  = parseFloat((1 - priceYes).toFixed(4));
+    const priceNo = parseFloat((1 - priceYes).toFixed(4));
 
+    // fetch recent trades for this contract (NO "action" column)
     const { data: recentTrades } = await adminClient
       .from("trades")
       .select("id, side, tokens_spent, shares_received, fee, price_yes_at_trade, price_no_at_trade, created_at")
@@ -45,11 +46,10 @@ export async function GET(
       data: {
         ...contract,
         price_yes: priceYes,
-        price_no:  priceNo,
+        price_no: priceNo,
         recent_trades: recentTrades ?? [],
       },
     });
-
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

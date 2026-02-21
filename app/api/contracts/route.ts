@@ -34,7 +34,6 @@ export async function GET() {
 // POST /api/contracts
 export async function POST(request: Request) {
   try {
-    // await requireAdmin();
 
     const body = await request.json();
 

@@ -1,3 +1,4 @@
+// lib/auth.ts
 import { cookies } from "next/headers";
 
 export type SessionUser = {
@@ -12,6 +13,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   if (!id) return null;
 
-  // Keep it minimal; use DB to resolve username if you want.
   return { id, role: "trader", username: "demo_trader" };
+}
+
+export async function requireAdmin(): Promise<SessionUser> {
+  const user = await getSessionUser();
+  if (!user) throw new Error("Not authenticated.");
+  if (user.role !== "admin") throw new Error("Admin role required.");
+  return user;
 }
