@@ -5,7 +5,6 @@ import { getPortfolio } from "@/lib/market";
 import { useState } from "react";
 import Link from "next/link";
 
-
 // ── Types ──────────────────────────────────────────────────────────────────
 type PerformanceTier = "top" | "average" | "underdog";
 type ContractType = "gpa" | "course" | "credits";
@@ -109,76 +108,6 @@ const totalPnL    = currentPositions.reduce((acc, p) => acc + calcPosition(p).pn
 const totalSpent  = currentPositions.reduce((acc, p) => acc + p.yes_shares * p.yes_entry_price + p.no_shares * p.no_entry_price, 0);
 const netWorth    = mockUser.balance + totalEstVal;
 
-// ── NavBar ─────────────────────────────────────────────────────────────────
-function NavBar({ balance, rank }: { balance: number; rank: number }) {
-  const [open, setOpen] = useState(false);
-  const links = ["Dashboard", "Portfolio", "Leaderboard", "About", "FAQ"];
-  const routes: Record<string, string> = {
-    Dashboard: "/", Portfolio: "/portfolio",
-    Leaderboard: "/leaderboard", About: "/about", FAQ: "/faq",
-  };
-  return (
-    <nav style={{ background: "#1e1e1e", borderBottom: "4px solid #E31837", position: "sticky", top: 0, zIndex: 50 }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#E31837", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 18, fontFamily: "Georgia,serif", flexShrink: 0 }}>R</div>
-          <div>
-            <div style={{ color: "#E31837", fontWeight: 900, fontSize: 16, fontFamily: "Georgia,serif", letterSpacing: 1, lineHeight: 1 }}>REBEL ODDS</div>
-            <div style={{ color: "#9FA1A4", fontSize: 9, letterSpacing: 3, textTransform: "uppercase" }}>Prediction Markets</div>
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }} className="ro-desktop-nav">
-          {links.map((l) => (
-            <Link key={l} href={routes[l]}
-              style={{ color: l === "Portfolio" ? "#E31837" : "#9FA1A4", fontSize: 13, fontWeight: 600, textDecoration: "none" }}
-              onMouseEnter={(e) => { if (l !== "Portfolio") (e.currentTarget as HTMLElement).style.color = "#fff"; }}
-              onMouseLeave={(e) => { if (l !== "Portfolio") (e.currentTarget as HTMLElement).style.color = "#9FA1A4"; }}>
-              {l}
-            </Link>
-          ))}
-          <div style={{ height: 32, width: 1, background: "#333" }} />
-          <div style={{ textAlign: "right" }}>
-            <div style={{ color: "#E31837", fontWeight: 700, fontSize: 13 }}>{balance.toLocaleString()} RT</div>
-            <div style={{ color: "#9FA1A4", fontSize: 10 }}>Rank #{rank}</div>
-          </div>
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1a0000", border: "2px solid #E31837", display: "flex", alignItems: "center", justifyContent: "center", color: "#E31837", fontSize: 12, fontWeight: 700 }}>
-            {mockUser.username[0].toUpperCase()}
-          </div>
-        </div>
-        <button onClick={() => setOpen((o) => !o)} className="ro-hamburger"
-          style={{ display: "none", background: "none", border: "none", cursor: "pointer", padding: 8, flexDirection: "column", gap: 5 }}>
-          <span style={{ display: "block", width: 22, height: 2, background: open ? "#E31837" : "#fff", transition: "all .2s", transform: open ? "rotate(45deg) translate(5px,5px)" : "none" }} />
-          <span style={{ display: "block", width: 22, height: 2, background: "#fff", opacity: open ? 0 : 1, transition: "opacity .2s" }} />
-          <span style={{ display: "block", width: 22, height: 2, background: open ? "#E31837" : "#fff", transition: "all .2s", transform: open ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
-        </button>
-      </div>
-      {open && (
-        <div style={{ background: "#161616", borderTop: "1px solid #222", padding: "12px 20px 16px" }}>
-          {links.map((l) => (
-            <Link key={l} href={routes[l]} onClick={() => setOpen(false)}
-              style={{ display: "block", padding: "10px 0", color: l === "Portfolio" ? "#E31837" : "#9FA1A4", textDecoration: "none", borderBottom: "1px solid #1a1a1a", fontSize: 14, fontWeight: 600 }}>
-              {l}
-            </Link>
-          ))}
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #333", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ color: "#E31837", fontWeight: 700, fontSize: 14 }}>{balance.toLocaleString()} RT</div>
-              <div style={{ color: "#9FA1A4", fontSize: 11 }}>Rank #{rank}</div>
-            </div>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1a0000", border: "2px solid #E31837", display: "flex", alignItems: "center", justifyContent: "center", color: "#E31837", fontSize: 13, fontWeight: 700 }}>
-              {mockUser.username[0].toUpperCase()}
-            </div>
-          </div>
-        </div>
-      )}
-      <style>{`
-        @media (max-width: 860px) { .ro-desktop-nav { gap: 14px !important; } }
-        @media (max-width: 720px) { .ro-desktop-nav { display: none !important; } .ro-hamburger { display: flex !important; } }
-      `}</style>
-    </nav>
-  );
-}
-
 // ── ProbBar ────────────────────────────────────────────────────────────────
 function ProbBar({ yp, muted }: { yp: number; muted?: boolean }) {
   const pct = (yp * 100).toFixed(1);
@@ -271,7 +200,7 @@ function PositionRow({ p, muted }: { p: Position; muted?: boolean }) {
           <td colSpan={7} style={{ padding: "0 16px 16px 16px", borderBottom: "1px solid #f0f0f0" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
 
-              {/* Mobile-only quick stats strip — hidden on desktop */}
+              {/* Mobile-only quick stats strip */}
               <div className="ro-mobile-summary" style={{ display: "none", background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: "10px 14px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                   <div>
@@ -308,17 +237,8 @@ function PositionRow({ p, muted }: { p: Position; muted?: boolean }) {
 
               {/* Outcome banner for resolved positions */}
               {muted && p.outcome && (
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 14px", borderRadius: 10,
-                  background: isWon ? "#e6f4ec" : "#fdecea",
-                  border: `1px solid ${isWon ? "#b6dfca" : "#f5b8b2"}`,
-                }}>
-                  <div style={{
-                    fontSize: 18, width: 32, height: 32, borderRadius: "50%",
-                    background: isWon ? "#2d8a4e" : "#B10202",
-                    display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0,
-                  }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, background: isWon ? "#e6f4ec" : "#fdecea", border: `1px solid ${isWon ? "#b6dfca" : "#f5b8b2"}` }}>
+                  <div style={{ fontSize: 18, width: 32, height: 32, borderRadius: "50%", background: isWon ? "#2d8a4e" : "#B10202", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
                     {isWon ? "✓" : "✗"}
                   </div>
                   <div>
@@ -327,18 +247,14 @@ function PositionRow({ p, muted }: { p: Position; muted?: boolean }) {
                     </div>
                     <div style={{ fontSize: 10, color: "#666", marginTop: 1 }}>
                       Resolved <strong style={{ color: p.outcome === "yes" ? "#2d8a4e" : "#B10202" }}>{p.outcome!.toUpperCase()}</strong>
-                      {" · "}You bet <strong style={{ color: (p.yes_shares > 0 ? "#2d8a4e" : "#B10202") }}>
-                        {p.yes_shares > 0 ? "YES" : "NO"}
-                      </strong>
-                      {" · "}
-                      {isWon ? "Payout credited to wallet" : "Shares forfeited"}
+                      {" · "}You bet <strong style={{ color: p.yes_shares > 0 ? "#2d8a4e" : "#B10202" }}>{p.yes_shares > 0 ? "YES" : "NO"}</strong>
+                      {" · "}{isWon ? "Payout credited to wallet" : "Shares forfeited"}
                     </div>
                   </div>
                 </div>
               )}
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-
                 {/* Market Price card */}
                 <div style={{ background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: "12px 14px" }}>
                   <div style={{ fontSize: 9, color: "#9FA1A4", textTransform: "uppercase", letterSpacing: 2, marginBottom: 8, fontWeight: 700 }}>Market Price</div>
@@ -358,26 +274,13 @@ function PositionRow({ p, muted }: { p: Position; muted?: boolean }) {
                   const positionPnl = estVal - cost;
                   const correct = muted && p.outcome ? (heldYes ? p.outcome === "yes" : p.outcome === "no") : null;
                   return (
-                    <div style={{
-                      background: heldYes ? "#f0faf4" : "#fff5f5",
-                      borderRadius: 10, padding: "12px 14px",
-                      border: muted && correct !== null
-                        ? `2px solid ${correct ? (heldYes ? "#2d8a4e" : "#B10202") : "#ccc"}`
-                        : `1px solid ${heldYes ? "#b6dfca" : "#f5b8b2"}`,
-                    }}>
+                    <div style={{ background: heldYes ? "#f0faf4" : "#fff5f5", borderRadius: 10, padding: "12px 14px", border: muted && correct !== null ? `2px solid ${correct ? (heldYes ? "#2d8a4e" : "#B10202") : "#ccc"}` : `1px solid ${heldYes ? "#b6dfca" : "#f5b8b2"}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-                        <span style={{
-                          fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 99, letterSpacing: 1,
-                          background: heldYes ? "#2d8a4e" : "#B10202", color: "#fff",
-                        }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 99, letterSpacing: 1, background: heldYes ? "#2d8a4e" : "#B10202", color: "#fff" }}>
                           BET {heldYes ? "YES" : "NO"}
                         </span>
                         {muted && p.outcome && correct !== null && (
-                          <span style={{
-                            fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 99, letterSpacing: 1,
-                            background: correct ? "#e6f4ec" : "#fdecea",
-                            color: correct ? "#2d8a4e" : "#B10202",
-                          }}>
+                          <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 99, letterSpacing: 1, background: correct ? "#e6f4ec" : "#fdecea", color: correct ? "#2d8a4e" : "#B10202" }}>
                             {correct ? "✓ CORRECT" : "✗ WRONG"}
                           </span>
                         )}
@@ -386,11 +289,7 @@ function PositionRow({ p, muted }: { p: Position; muted?: boolean }) {
                         <MiniStat label="Shares" value={shares.toString()} />
                         <MiniStat label="Cost" value={`${cost.toFixed(0)} RT`} />
                         <MiniStat label="Value" value={`${estVal.toFixed(0)} RT`} color={heldYes ? "#2d8a4e" : "#E31837"} />
-                        <MiniStat
-                          label="PnL"
-                          value={`${positionPnl >= 0 ? "+" : ""}${positionPnl.toFixed(0)} RT`}
-                          color={positionPnl >= 0 ? "#2d8a4e" : "#E31837"}
-                        />
+                        <MiniStat label="PnL" value={`${positionPnl >= 0 ? "+" : ""}${positionPnl.toFixed(0)} RT`} color={positionPnl >= 0 ? "#2d8a4e" : "#E31837"} />
                       </div>
                     </div>
                   );
@@ -412,8 +311,6 @@ export default function PortfolioPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f4f4f4", fontFamily: "'Helvetica Neue',Arial,sans-serif" }}>
-      <NavBar balance={mockUser.balance} rank={mockUser.rank} />
-
       <style>{`
         .ro-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; max-width: 1100px; margin: 24px auto; padding: 0 20px 48px; }
         @media (max-width: 860px) { .ro-layout { grid-template-columns: 1fr; } }
@@ -433,7 +330,6 @@ export default function PortfolioPage() {
           .ro-table th:nth-child(2) { width: 20%; text-align: right; }
           .ro-table th:nth-child(7) { width: 10%; }
           .ro-col-hide { display: none; }
-          .ro-col-tier th, .ro-col-tier td { text-align: right !important; }
           .ro-mobile-summary { display: block !important; }
           .ro-tier-full { display: none; }
           .ro-tier-short { display: inline !important; }
@@ -449,9 +345,9 @@ export default function PortfolioPage() {
           </div>
           <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
             {[
-              { label: "Net Worth",  value: `${netWorth.toFixed(0)} RT`,                                            color: "#E31837" },
-              { label: "Total PnL",  value: `${totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(0)} RT`,               color: totalPnL >= 0 ? "#4caf72" : "#ff6b6b" },
-              { label: "Positions",  value: currentPositions.length.toString(),                                      color: "#fff" },
+              { label: "Net Worth", value: `${netWorth.toFixed(0)} RT`, color: "#E31837" },
+              { label: "Total PnL", value: `${totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(0)} RT`, color: totalPnL >= 0 ? "#4caf72" : "#ff6b6b" },
+              { label: "Positions", value: currentPositions.length.toString(), color: "#fff" },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 9, color: "#9FA1A4", textTransform: "uppercase", letterSpacing: 2 }}>{label}</div>
@@ -463,10 +359,8 @@ export default function PortfolioPage() {
       </div>
 
       <div className="ro-layout">
-
         {/* ── SIDEBAR ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
           {/* Account card */}
           <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e8e8e8", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05)" }}>
             <div style={{ background: "#1e1e1e", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -480,11 +374,11 @@ export default function PortfolioPage() {
             </div>
             <div style={{ padding: "4px 16px 12px" }}>
               {[
-                { label: "Token Balance",   value: `${mockUser.balance.toLocaleString()} RT`, bold: true,  color: "#000" },
-                { label: "Position Value",  value: `${totalEstVal.toFixed(0)} RT`,             bold: false, color: "#2d8a4e" },
-                { label: "Total Invested",  value: `${totalSpent.toFixed(0)} RT`,              bold: false, color: "#666" },
-                { label: "Unrealized PnL",  value: `${totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(0)} RT`, bold: true, color: totalPnL >= 0 ? "#2d8a4e" : "#E31837" },
-                { label: "Net Worth",       value: `${netWorth.toFixed(0)} RT`,               bold: true,  color: "#E31837" },
+                { label: "Token Balance",  value: `${mockUser.balance.toLocaleString()} RT`, bold: true,  color: "#000" },
+                { label: "Position Value", value: `${totalEstVal.toFixed(0)} RT`,             bold: false, color: "#2d8a4e" },
+                { label: "Total Invested", value: `${totalSpent.toFixed(0)} RT`,              bold: false, color: "#666" },
+                { label: "Unrealized PnL", value: `${totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(0)} RT`, bold: true, color: totalPnL >= 0 ? "#2d8a4e" : "#E31837" },
+                { label: "Net Worth",      value: `${netWorth.toFixed(0)} RT`,                bold: true,  color: "#E31837" },
               ].map(({ label, value, bold, color }) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f5f5f5" }}>
                   <span style={{ fontSize: 11, color: "#9FA1A4" }}>{label}</span>
@@ -591,10 +485,6 @@ export default function PortfolioPage() {
               </div>
             )}
           </div>
-
-          <p style={{ textAlign: "center", fontSize: 10, color: "#9FA1A4", marginTop: 16 }}>
-            ⚠️ <strong>Paper Trading Only.</strong> Rebel Tokens have no monetary value.
-          </p>
         </div>
       </div>
     </div>
